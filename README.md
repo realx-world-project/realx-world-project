@@ -1,10 +1,8 @@
-
-## Hi there 👋
-# Realx-world Platform
+# Realx Platform
 
 ## Overview
 
-Realx-world is a modern real estate platform built with a scalable full-stack architecture using Next.js. It supports property listings, user management, and optimized media delivery.
+Realx is a modern real estate platform built with a scalable full-stack architecture using Next.js. It supports property listings, user management, and optimized media delivery.
 
 ---
 
@@ -27,6 +25,38 @@ Make sure you have the following installed:
 * Node.js (v18 or later)
 * npm or yarn
 * Git
+
+---
+
+## 📁 Project Structure
+
+```bash
+realx-platform/
+│
+├── app/                # Next.js app directory (routes, pages, layouts)
+├── components/         # Reusable UI components
+├── lib/                # Utility functions (API clients, helpers)
+├── prisma/             # Prisma schema and migrations
+│   └── schema.prisma
+├── public/             # Static assets (images, icons)
+├── styles/             # Global styles (CSS/Tailwind)
+├── types/              # TypeScript types/interfaces
+│
+├── .env                # Environment variables (not committed)
+├── .gitignore
+├── package.json
+├── README.md
+```
+
+### Folder Explanation
+
+* **app/** → Handles routing, pages, layouts (Next.js App Router)
+* **components/** → Shared UI components (buttons, cards, etc.)
+* **lib/** → API logic, database clients, helper functions
+* **prisma/** → Database schema and migration files
+* **public/** → Static files accessible in browser
+* **styles/** → CSS or Tailwind styling
+* **types/** → Type definitions for better code structure
 
 ---
 
@@ -103,14 +133,63 @@ http://localhost:3000
 
 ---
 
+## 🚀 Deployment Flow
+
+1. **Code Development**
+
+   * Developers write code locally
+   * Changes are committed and pushed to GitHub
+
+2. **Automatic Deployment**
+
+   * Vercel is connected to the GitHub repository
+   * Every push triggers an automatic build and deployment
+
+3. **Build Process**
+
+   * Vercel installs dependencies
+   * Runs build command (`npm run build`)
+   * Prepares the Next.js application
+
+4. **Environment Variables**
+
+   * Vercel uses environment variables configured in its dashboard:
+
+     * Supabase keys
+     * Redis credentials
+     * Cloudinary credentials
+
+5. **Live Application**
+
+   * The app is deployed and accessible via:
+
+     ```
+     https://your-project.vercel.app
+     ```
+
+6. **Domain & Security**
+
+   * Custom domain is connected via Cloudflare
+   * Cloudflare provides:
+
+     * SSL (HTTPS)
+     * WAF protection
+     * DNS routing
+
+7. **Backend Services**
+
+   * Supabase handles database operations
+   * Upstash Redis handles caching and rate limiting
+   * Cloudinary handles image storage and delivery
+
+---
+
 ## Deployment
 
-The project is deployed using Vercel.
-
-To deploy:
+To deploy manually:
 
 1. Push code to GitHub
-2. Connect the repository to Vercel
+2. Connect repository to Vercel
 3. Add environment variables in Vercel dashboard
 4. Deploy
 
@@ -133,6 +212,3 @@ All contributors should:
 * Test features before pushing
 
 ---
-
-
-
