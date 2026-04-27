@@ -1,4 +1,4 @@
-import { auth } from "next-auth";
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -11,13 +11,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const session = await auth(req);
+  const session = await auth();
 
   if (pathname.startsWith("/admin")) {
     if (!session?.user) {
       return NextResponse.redirect(new URL(AUTH_LOGIN, req.url));
     }
-    if (session.user.role !== "ADMIN") {
+    if ((session.user as any).role !== "ADMIN") {
       return NextResponse.redirect(new URL(AUTH_LOGIN, req.url));
     }
     return NextResponse.next();

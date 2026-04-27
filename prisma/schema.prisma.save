@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  AGENT
+  SELLER
+  BUYER
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum ListingCategory {
+  RESIDENTIAL
+  COMMERCIAL
+  LAND
+}
+
+enum ListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PUBLISHED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String?
+  name         String?
+  phone        String?
+  role         UserRole    @default(BUYER)
+  isVerified   Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  listings     Listing[]
+  savedListings SavedListing[]
+  reports      Report[]
+  auditLogs    AuditLog[]
+  exports      Export[]
+
+  @@map("users")
+}
+
+model Listing {
+  id          String          @id @default(cuid())
+  title       String
+  description String
+  price       Float
+  type        ListingType
+  category    ListingCategory
+  status      ListingStatus   @default(PENDING)
+  userId      String
+  locationId  String
+  publishedAt DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id])
+  location    Location        @relation(fields: [locationId], references: [id])
+  images      ListingImage[]
+  savedBy     SavedListing[]
+  reports     Report[]
+
+  @@map("listings")
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  listingId String
+  url       String
+  publicId  String
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing   Listing  @relation(fields: [listingId], references: [id])
+
+  @@map("listing_images")
+}
+
+model Location {
+  id      String   @id @default(cuid())
+  state   String
+  city    String
+  area    String
+  address String
+  lat     Float?
+  lng     Float?
+
+  listings Listing[]
+
+  @@map("locations")
+}
+
+model SavedListing {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id])
+
+  @@map("saved_listings")
+}
+
+model Report {
+  id        String       @id @default(cuid())
+  userId    String
+  listingId String
+  reason    String
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  user      User         @relation(fields: [userId], references: [id])
+  listing   Listing      @relation(fields: [listingId], references: [id])
+
+  @@map("reports")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  meta      Json
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Export {
+  id          String       @id @default(cuid())
+  userId      String
+  type        String
+  status      ExportStatus @default(PENDING)
+  fileUrl     String?
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@map("exports")
+}
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
