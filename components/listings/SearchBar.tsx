@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/sheet";
 
 // ── Option tables ──────────────────────────────────────────────────────────
-// Defined as arrays so we can both render SelectItems AND look up the label
-// for the current value without relying on Radix's lazy portal item-lookup.
 
 const TYPE_OPTIONS = [
   { value: "all",  label: "All Types" },
@@ -46,7 +44,6 @@ const PRICE_OPTIONS = [
   { value: "100000000-",         label: "Above ₦100M" },
 ] as const;
 
-// Alphabetical; FCT sorted among F's
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
   "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
@@ -72,11 +69,11 @@ function getStateLabel(s: string): string {
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface Filters {
-  query:    string; // "" = no text search
-  type:     string; // "all" = no filter
-  category: string; // "all" = no filter
-  state:    string; // "all" = no filter
-  price:    string; // "any" = no filter
+  query:    string;
+  type:     string;
+  category: string;
+  state:    string;
+  price:    string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -95,7 +92,110 @@ function filtersToParams(f: Filters): URLSearchParams {
   return p;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
+// ── FilterControls — module-level component (never defined inside a render) ─
+
+interface FilterControlsProps {
+  filters:          Filters;
+  hasActiveFilters: boolean;
+  onFilterChange:   (key: keyof Filters, value: string) => void;
+  onSearch:         () => void;
+  onClear:          () => void;
+}
+
+function FilterControls({
+  filters,
+  hasActiveFilters,
+  onFilterChange,
+  onSearch,
+  onClear,
+}: FilterControlsProps) {
+  return (
+    <div className="space-y-4">
+      {/* Type */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium">Property Type</label>
+        <Select value={filters.type} onValueChange={(v) => onFilterChange("type", v)}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{getLabel(TYPE_OPTIONS, filters.type)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {TYPE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Category */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium">Category</label>
+        <Select value={filters.category} onValueChange={(v) => onFilterChange("category", v)}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{getLabel(CATEGORY_OPTIONS, filters.category)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {CATEGORY_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* State */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium">State</label>
+        <Select value={filters.state} onValueChange={(v) => onFilterChange("state", v)}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{getStateLabel(filters.state)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All States</SelectItem>
+            {NIGERIAN_STATES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s === "FCT" ? "FCT (Abuja)" : s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Price */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium">Price Range</label>
+        <Select value={filters.price} onValueChange={(v) => onFilterChange("price", v)}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{getLabel(PRICE_OPTIONS, filters.price)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {PRICE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Action buttons — standalone, never inside another button */}
+      <div className="flex gap-2 pt-2">
+        <Button onClick={onSearch} className="flex-1">
+          <Search className="mr-2 h-4 w-4" />
+          Search
+        </Button>
+        {hasActiveFilters && (
+          <Button
+            variant="outline"
+            onClick={onClear}
+            className="border-gray-300 text-gray-700"
+          >
+            <XCircle className="mr-1 h-4 w-4" />
+            Clear
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── SearchBar ──────────────────────────────────────────────────────────────
 
 export function SearchBar() {
   const router = useRouter();
@@ -114,8 +214,6 @@ export function SearchBar() {
   });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // ── Mutators ─────────────────────────────────────────────────────────────
-
   const setFilter = (key: keyof Filters, v: string) =>
     setFilters((prev) => ({ ...prev, [key]: v }));
 
@@ -131,100 +229,11 @@ export function SearchBar() {
   };
 
   const hasActiveFilters =
-    !!filters.query          ||
+    !!filters.query           ||
     filters.type     !== "all" ||
     filters.category !== "all" ||
     filters.state    !== "all" ||
     filters.price    !== "any";
-
-  // ── Mobile filter panel ───────────────────────────────────────────────────
-
-  const FilterControls = () => (
-    <div className="space-y-4">
-      {/* Type */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium">Property Type</label>
-        <Select value={filters.type} onValueChange={(v) => setFilter("type", v)}>
-          <SelectTrigger className="w-full">
-            {/* Explicit child bypasses Radix's lazy portal item-lookup */}
-            <SelectValue>{getLabel(TYPE_OPTIONS, filters.type)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {TYPE_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Category */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium">Category</label>
-        <Select value={filters.category} onValueChange={(v) => setFilter("category", v)}>
-          <SelectTrigger className="w-full">
-            <SelectValue>{getLabel(CATEGORY_OPTIONS, filters.category)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORY_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* State */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium">State</label>
-        <Select value={filters.state} onValueChange={(v) => setFilter("state", v)}>
-          <SelectTrigger className="w-full">
-            <SelectValue>{getStateLabel(filters.state)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All States</SelectItem>
-            {NIGERIAN_STATES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s === "FCT" ? "FCT (Abuja)" : s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Price */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium">Price Range</label>
-        <Select value={filters.price} onValueChange={(v) => setFilter("price", v)}>
-          <SelectTrigger className="w-full">
-            <SelectValue>{getLabel(PRICE_OPTIONS, filters.price)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {PRICE_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-2 pt-2">
-        <Button onClick={search} className="flex-1">
-          <Search className="mr-2 h-4 w-4" />
-          Search
-        </Button>
-        {hasActiveFilters && (
-          <Button
-            variant="outline"
-            onClick={clearAll}
-            className="border-gray-300 text-gray-700"
-          >
-            <XCircle className="mr-1 h-4 w-4" />
-            Clear
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-
-  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-3">
@@ -245,9 +254,8 @@ export function SearchBar() {
           <Button onClick={search}>Search</Button>
         </div>
 
-        {/* Filter row */}
+        {/* Filter row — SelectTriggers and Clear button are siblings, never nested */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Type */}
           <Select value={filters.type} onValueChange={(v) => setFilter("type", v)}>
             <SelectTrigger className="w-auto bg-white border-gray-200 text-gray-700 min-w-[140px]">
               <SelectValue>{getLabel(TYPE_OPTIONS, filters.type)}</SelectValue>
@@ -259,7 +267,6 @@ export function SearchBar() {
             </SelectContent>
           </Select>
 
-          {/* Category */}
           <Select value={filters.category} onValueChange={(v) => setFilter("category", v)}>
             <SelectTrigger className="w-auto bg-white border-gray-200 text-gray-700 min-w-[155px]">
               <SelectValue>{getLabel(CATEGORY_OPTIONS, filters.category)}</SelectValue>
@@ -271,7 +278,6 @@ export function SearchBar() {
             </SelectContent>
           </Select>
 
-          {/* State */}
           <Select value={filters.state} onValueChange={(v) => setFilter("state", v)}>
             <SelectTrigger className="w-auto bg-white border-gray-200 text-gray-700 min-w-[140px]">
               <SelectValue>{getStateLabel(filters.state)}</SelectValue>
@@ -286,7 +292,6 @@ export function SearchBar() {
             </SelectContent>
           </Select>
 
-          {/* Price */}
           <Select value={filters.price} onValueChange={(v) => setFilter("price", v)}>
             <SelectTrigger className="w-auto bg-white border-gray-200 text-gray-700 min-w-[160px]">
               <SelectValue>{getLabel(PRICE_OPTIONS, filters.price)}</SelectValue>
@@ -298,7 +303,6 @@ export function SearchBar() {
             </SelectContent>
           </Select>
 
-          {/* Clear filters — always visible when active */}
           {hasActiveFilters && (
             <Button
               variant="outline"
@@ -326,6 +330,8 @@ export function SearchBar() {
           />
         </div>
 
+        {/* Filter sheet — SheetTrigger renders one button via asChild; SheetContent
+            portals to document.body so its buttons are never inside the trigger */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" aria-label="Open filters">
@@ -337,11 +343,18 @@ export function SearchBar() {
               <SheetTitle>Filter Properties</SheetTitle>
             </SheetHeader>
             <div className="mt-6">
-              <FilterControls />
+              <FilterControls
+                filters={filters}
+                hasActiveFilters={hasActiveFilters}
+                onFilterChange={setFilter}
+                onSearch={search}
+                onClear={clearAll}
+              />
             </div>
           </SheetContent>
         </Sheet>
 
+        {/* Standalone search button — not inside any other button */}
         <Button onClick={search} size="icon" aria-label="Search">
           <Search className="h-4 w-4" />
         </Button>
