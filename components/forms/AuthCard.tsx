@@ -11,7 +11,7 @@ export function AuthCard({ title, subtitle, children }: AuthCardProps) {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <div className="text-center mb-4">
-          <h1 className="text-3xl font-bold text-blue-600">Relex World</h1>
+          <h1 className="text-3xl font-bold text-blue-600">RealX World</h1>
         </div>
         <CardTitle>{title}</CardTitle>
         {subtitle && <CardDescription>{subtitle}</CardDescription>}

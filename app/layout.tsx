@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Relex World",
+  title: "RealX World",
   description: "Nigeria-focused real estate listings and marketplace platform",
 };
 

@@ -69,7 +69,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthCard title="Create Account" subtitle="Join Relex World today">
+    <AuthCard title="Create Account" subtitle="Join RealX World today">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField

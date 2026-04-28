@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Admin Dashboard | Relex World",
+  title: "Admin Dashboard | RealX World",
 };
 
 // ── Mock data ──────────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Admin Dashboard</h1>
         <p className="mt-1 text-muted-foreground">Overview of platform activity</p>
       </div>
 

@@ -69,7 +69,22 @@ async function fetchListing(id: string): Promise<Listing | null> {
 }
 
 export async function generateMetadata({ params }: ListingDetailPageProps): Promise<Metadata> {
-  return { title: "Property Details | Relex World" };
+  const { id } = await params;
+  const listing = await fetchListing(id);
+  const data = listing ?? (id === "mock-1" ? mockListing : null);
+
+  if (!data) {
+    return { title: "Property Not Found | RealX World" };
+  }
+
+  const description = data.description
+    ? data.description.slice(0, 160).replace(/\n/g, " ")
+    : `${data.type === "RENT" ? "For Rent" : "For Sale"} — ${data.category.toLowerCase()} property in ${data.city}, ${data.state}`;
+
+  return {
+    title: `${data.title} | RealX World`,
+    description,
+  };
 }
 
 function NotFound() {
@@ -120,7 +135,7 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
                 <Badge className={typeClasses[data.type]}>{data.type}</Badge>
                 <Badge variant="outline">{data.category}</Badge>
               </div>
-              <h1 className="text-3xl font-bold">{data.title}</h1>
+              <h1 className="text-2xl font-bold sm:text-3xl">{data.title}</h1>
               <div className="mt-2 flex items-center gap-1 text-muted-foreground">
                 <MapPin className="h-4 w-4 flex-shrink-0" />
                 <span>{data.address ?? `${data.location}, ${data.city}, ${data.state}`}</span>
@@ -128,7 +143,7 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
             </div>
 
             {/* Price */}
-            <p className="text-3xl font-bold text-primary">
+            <p className="text-2xl font-bold text-primary sm:text-3xl">
               {formatPrice(data.price)}
               {data.type === "RENT" && (
                 <span className="ml-1 text-lg font-normal text-muted-foreground">/year</span>

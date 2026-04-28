@@ -76,7 +76,7 @@ interface MyListingsPageProps {
 }
 
 export const metadata: Metadata = {
-  title: "My Listings | Relex World",
+  title: "My Listings | RealX World",
   description: "Manage your property listings",
 };
 
@@ -135,15 +135,15 @@ async function ListingsContent({ searchParams }: MyListingsPageProps) {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Page Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">My Listings</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">My Listings</h1>
           <p className="mt-2 text-muted-foreground">
             Manage your property listings
           </p>
         </div>
         <Link href="/dashboard/listings/new">
-          <Button>
+          <Button className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Listing
           </Button>

@@ -9,7 +9,7 @@ export default async function HomePage() {
   } else if (session?.user) {
     redirect("/dashboard");
   } else {
-    redirect("/listings");
+    redirect("/home");
   }
 
   // This code is unreachable due to redirects above
@@ -17,7 +17,7 @@ export default async function HomePage() {
   return (
     <main className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-blue-600 mb-4">Relex World</h1>
+        <h1 className="text-4xl font-bold text-blue-600 mb-4">RealX World</h1>
         <p className="text-lg text-gray-700 mb-8">
           Nigeria's premier real estate marketplace platform.
         </p>

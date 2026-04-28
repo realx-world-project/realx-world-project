@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,40 +20,74 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+// ── Option tables ──────────────────────────────────────────────────────────
+// Defined as arrays so we can both render SelectItems AND look up the label
+// for the current value without relying on Radix's lazy portal item-lookup.
+
+const TYPE_OPTIONS = [
+  { value: "all",  label: "All Types" },
+  { value: "SALE", label: "For Sale" },
+  { value: "RENT", label: "For Rent" },
+] as const;
+
+const CATEGORY_OPTIONS = [
+  { value: "all",          label: "All Categories" },
+  { value: "RESIDENTIAL",  label: "Residential" },
+  { value: "COMMERCIAL",   label: "Commercial" },
+  { value: "LAND",         label: "Land" },
+] as const;
+
+const PRICE_OPTIONS = [
+  { value: "any",                label: "Any Price" },
+  { value: "0-5000000",          label: "Under ₦5M" },
+  { value: "5000000-20000000",   label: "₦5M – ₦20M" },
+  { value: "20000000-50000000",  label: "₦20M – ₦50M" },
+  { value: "50000000-100000000", label: "₦50M – ₦100M" },
+  { value: "100000000-",         label: "Above ₦100M" },
+] as const;
+
+// Alphabetical; FCT sorted among F's
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
-  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe",
-  "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara",
-  "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau",
-  "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
+  "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi",
+  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun",
+  "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
-const PRICE_RANGES = [
-  { label: "Any Price", value: "any" },
-  { label: "Under ₦10M", value: "0-10000000" },
-  { label: "₦10M – ₦30M", value: "10000000-30000000" },
-  { label: "₦30M – ₦50M", value: "30000000-50000000" },
-  { label: "₦50M – ₦100M", value: "50000000-100000000" },
-  { label: "₦100M – ₦200M", value: "100000000-200000000" },
-  { label: "₦200M – ₦500M", value: "200000000-500000000" },
-  { label: "₦500M+", value: "500000000-" },
-];
+// ── Label helpers ──────────────────────────────────────────────────────────
+
+function getLabel(
+  options: readonly { value: string; label: string }[],
+  value: string,
+): string {
+  return options.find((o) => o.value === value)?.label ?? options[0].label;
+}
+
+function getStateLabel(s: string): string {
+  if (s === "all") return "All States";
+  return s === "FCT" ? "FCT (Abuja)" : s;
+}
+
+// ── Types ──────────────────────────────────────────────────────────────────
 
 interface Filters {
-  query: string;
-  type: string;
-  category: string;
-  state: string;
-  price: string;
+  query:    string; // "" = no text search
+  type:     string; // "all" = no filter
+  category: string; // "all" = no filter
+  state:    string; // "all" = no filter
+  price:    string; // "any" = no filter
 }
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function filtersToParams(f: Filters): URLSearchParams {
   const p = new URLSearchParams();
-  if (f.query) p.set("q", f.query);
-  if (f.type && f.type !== "all") p.set("type", f.type);
-  if (f.category && f.category !== "all") p.set("category", f.category);
-  if (f.state && f.state !== "all") p.set("state", f.state);
-  if (f.price && f.price !== "any") {
+  if (f.query)              p.set("q",        f.query);
+  if (f.type !== "all")     p.set("type",     f.type);
+  if (f.category !== "all") p.set("category", f.category);
+  if (f.state !== "all")    p.set("state",    f.state);
+  if (f.price !== "any") {
     const [min, max] = f.price.split("-");
     if (min) p.set("priceMin", min);
     if (max) p.set("priceMax", max);
@@ -61,29 +95,29 @@ function filtersToParams(f: Filters): URLSearchParams {
   return p;
 }
 
+// ── Component ──────────────────────────────────────────────────────────────
+
 export function SearchBar() {
   const router = useRouter();
-  const sp = useSearchParams();
+  const sp     = useSearchParams();
 
-  // Reconstruct current price range value from URL params
-  const currentPriceMin = sp.get("priceMin") ?? "";
-  const currentPriceMax = sp.get("priceMax") ?? "";
-  const currentPriceValue =
-    currentPriceMin
-      ? `${currentPriceMin}-${currentPriceMax}`
-      : "any";
+  const priceMin = sp.get("priceMin") ?? "";
+  const priceMax = sp.get("priceMax") ?? "";
+  const currentPrice = priceMin ? `${priceMin}-${priceMax}` : "any";
 
   const [filters, setFilters] = useState<Filters>({
-    query: sp.get("q") ?? "",
-    type: sp.get("type") ?? "all",
+    query:    sp.get("q")        ?? "",
+    type:     sp.get("type")     ?? "all",
     category: sp.get("category") ?? "all",
-    state: sp.get("state") ?? "all",
-    price: currentPriceValue,
+    state:    sp.get("state")    ?? "all",
+    price:    currentPrice,
   });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const update = (key: keyof Filters, value: string) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
+  // ── Mutators ─────────────────────────────────────────────────────────────
+
+  const setFilter = (key: keyof Filters, v: string) =>
+    setFilters((prev) => ({ ...prev, [key]: v }));
 
   const search = () => {
     const qs = filtersToParams(filters).toString();
@@ -91,77 +125,81 @@ export function SearchBar() {
     setMobileOpen(false);
   };
 
-  const clear = () => {
-    const reset: Filters = { query: "", type: "all", category: "all", state: "all", price: "any" };
-    setFilters(reset);
+  const clearAll = () => {
+    setFilters({ query: "", type: "all", category: "all", state: "all", price: "any" });
     router.push("/listings");
   };
 
-  const hasActive =
-    filters.type !== "all" ||
+  const hasActiveFilters =
+    !!filters.query          ||
+    filters.type     !== "all" ||
     filters.category !== "all" ||
-    filters.state !== "all" ||
-    filters.price !== "any";
+    filters.state    !== "all" ||
+    filters.price    !== "any";
+
+  // ── Mobile filter panel ───────────────────────────────────────────────────
 
   const FilterControls = () => (
     <div className="space-y-4">
+      {/* Type */}
       <div className="space-y-1.5">
         <label className="text-sm font-medium">Property Type</label>
-        <Select value={filters.type} onValueChange={(v) => update("type", v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="All Types" />
+        <Select value={filters.type} onValueChange={(v) => setFilter("type", v)}>
+          <SelectTrigger className="w-full">
+            {/* Explicit child bypasses Radix's lazy portal item-lookup */}
+            <SelectValue>{getLabel(TYPE_OPTIONS, filters.type)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="SALE">For Sale</SelectItem>
-            <SelectItem value="RENT">For Rent</SelectItem>
+            {TYPE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
+      {/* Category */}
       <div className="space-y-1.5">
         <label className="text-sm font-medium">Category</label>
-        <Select value={filters.category} onValueChange={(v) => update("category", v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="All Categories" />
+        <Select value={filters.category} onValueChange={(v) => setFilter("category", v)}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{getLabel(CATEGORY_OPTIONS, filters.category)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="RESIDENTIAL">Residential</SelectItem>
-            <SelectItem value="COMMERCIAL">Commercial</SelectItem>
-            <SelectItem value="LAND">Land</SelectItem>
+            {CATEGORY_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
+      {/* State */}
       <div className="space-y-1.5">
         <label className="text-sm font-medium">State</label>
-        <Select value={filters.state} onValueChange={(v) => update("state", v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="All States" />
+        <Select value={filters.state} onValueChange={(v) => setFilter("state", v)}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{getStateLabel(filters.state)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All States</SelectItem>
             {NIGERIAN_STATES.map((s) => (
               <SelectItem key={s} value={s}>
-                {s}
+                {s === "FCT" ? "FCT (Abuja)" : s}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
+      {/* Price */}
       <div className="space-y-1.5">
         <label className="text-sm font-medium">Price Range</label>
-        <Select value={filters.price} onValueChange={(v) => update("price", v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Any Price" />
+        <Select value={filters.price} onValueChange={(v) => setFilter("price", v)}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{getLabel(PRICE_OPTIONS, filters.price)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {PRICE_RANGES.map((r) => (
-              <SelectItem key={r.value} value={r.value}>
-                {r.label}
-              </SelectItem>
+            {PRICE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -172,9 +210,13 @@ export function SearchBar() {
           <Search className="mr-2 h-4 w-4" />
           Search
         </Button>
-        {hasActive && (
-          <Button variant="outline" onClick={clear}>
-            <X className="mr-1 h-4 w-4" />
+        {hasActiveFilters && (
+          <Button
+            variant="outline"
+            onClick={clearAll}
+            className="border-gray-300 text-gray-700"
+          >
+            <XCircle className="mr-1 h-4 w-4" />
             Clear
           </Button>
         )}
@@ -182,17 +224,20 @@ export function SearchBar() {
     </div>
   );
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
     <div className="space-y-3">
-      {/* Desktop layout */}
+      {/* ── Desktop layout ── */}
       <div className="hidden flex-col gap-3 md:flex">
+        {/* Search input row */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search properties by title or location…"
               value={filters.query}
-              onChange={(e) => update("query", e.target.value)}
+              onChange={(e) => setFilter("query", e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && search()}
               className="pl-10"
             />
@@ -200,74 +245,82 @@ export function SearchBar() {
           <Button onClick={search}>Search</Button>
         </div>
 
+        {/* Filter row */}
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={filters.type} onValueChange={(v) => update("type", v)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Type" />
+          {/* Type */}
+          <Select value={filters.type} onValueChange={(v) => setFilter("type", v)}>
+            <SelectTrigger className="w-auto bg-white border-gray-200 text-gray-700 min-w-[140px]">
+              <SelectValue>{getLabel(TYPE_OPTIONS, filters.type)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="SALE">For Sale</SelectItem>
-              <SelectItem value="RENT">For Rent</SelectItem>
+              {TYPE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
-          <Select value={filters.category} onValueChange={(v) => update("category", v)}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Category" />
+          {/* Category */}
+          <Select value={filters.category} onValueChange={(v) => setFilter("category", v)}>
+            <SelectTrigger className="w-auto bg-white border-gray-200 text-gray-700 min-w-[155px]">
+              <SelectValue>{getLabel(CATEGORY_OPTIONS, filters.category)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="RESIDENTIAL">Residential</SelectItem>
-              <SelectItem value="COMMERCIAL">Commercial</SelectItem>
-              <SelectItem value="LAND">Land</SelectItem>
+              {CATEGORY_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
-          <Select value={filters.state} onValueChange={(v) => update("state", v)}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="State" />
+          {/* State */}
+          <Select value={filters.state} onValueChange={(v) => setFilter("state", v)}>
+            <SelectTrigger className="w-auto bg-white border-gray-200 text-gray-700 min-w-[140px]">
+              <SelectValue>{getStateLabel(filters.state)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All States</SelectItem>
               {NIGERIAN_STATES.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s}
+                  {s === "FCT" ? "FCT (Abuja)" : s}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select value={filters.price} onValueChange={(v) => update("price", v)}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Price" />
+          {/* Price */}
+          <Select value={filters.price} onValueChange={(v) => setFilter("price", v)}>
+            <SelectTrigger className="w-auto bg-white border-gray-200 text-gray-700 min-w-[160px]">
+              <SelectValue>{getLabel(PRICE_OPTIONS, filters.price)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {PRICE_RANGES.map((r) => (
-                <SelectItem key={r.value} value={r.value}>
-                  {r.label}
-                </SelectItem>
+              {PRICE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          {hasActive && (
-            <Button variant="ghost" size="sm" onClick={clear}>
-              <X className="mr-1 h-3.5 w-3.5" />
+          {/* Clear filters — always visible when active */}
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearAll}
+              className="border-gray-300 text-gray-700"
+            >
+              <XCircle className="mr-1 h-3.5 w-3.5" />
               Clear filters
             </Button>
           )}
         </div>
       </div>
 
-      {/* Mobile layout */}
+      {/* ── Mobile layout ── */}
       <div className="flex gap-2 md:hidden">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search properties…"
             value={filters.query}
-            onChange={(e) => update("query", e.target.value)}
+            onChange={(e) => setFilter("query", e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && search()}
             className="pl-10"
           />

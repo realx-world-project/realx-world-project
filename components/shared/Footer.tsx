@@ -48,14 +48,14 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact</h3>
             <ul className="space-y-2">
-              <li className="text-gray-600">support@relexworld.com</li>
+              <li className="text-gray-600">support@realxworld.com</li>
               <li className="text-gray-600">+234 123 456 7890</li>
               <li className="text-gray-600">Lagos, Nigeria</li>
             </ul>
           </div>
         </div>
         <div className="border-t mt-8 pt-8 text-center">
-          <p className="text-gray-600">© 2025 Relex World. All rights reserved.</p>
+          <p className="text-gray-600">© 2025 RealX World. All rights reserved.</p>
         </div>
       </div>
     </footer>

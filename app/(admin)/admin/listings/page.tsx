@@ -252,7 +252,7 @@ export default function AdminListingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Listing Moderation</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Listing Moderation</h1>
         <p className="mt-1 text-muted-foreground">Review and moderate property listings</p>
       </div>
 
@@ -271,7 +271,7 @@ export default function AdminListingsPage() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden rounded-lg border md:block">
+          <div className="hidden overflow-x-auto rounded-lg border md:block">
             <Table>
               <TableHeader>
                 <TableRow>

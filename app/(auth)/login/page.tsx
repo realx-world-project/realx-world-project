@@ -68,7 +68,7 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthCard title="Sign In" subtitle="Welcome back to Relex World">
+    <AuthCard title="Sign In" subtitle="Welcome back to RealX World">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField

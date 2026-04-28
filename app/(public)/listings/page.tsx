@@ -109,8 +109,9 @@ interface ListingsPageProps {
 }
 
 export const metadata: Metadata = {
-  title: "Browse Properties | Relex World",
-  description: "Browse available properties for sale and rent in Nigeria",
+  title: "Browse Properties | RealX World",
+  description:
+    "Find houses, land, and commercial properties for sale and rent in Nigeria",
 };
 
 async function fetchListings(params: SearchParams) {
@@ -175,7 +176,7 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
     <div className="container mx-auto px-4 py-8">
       {/* Page Title */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Browse Properties</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Browse Properties</h1>
         <p className="mt-2 text-muted-foreground">
           Find your dream property in Nigeria
         </p>
@@ -195,7 +196,7 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
 
       {/* Listings Grid */}
       {filteredListings.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredListings.map((listing) => (
             <ListingCard
               key={listing.id}
@@ -261,7 +262,7 @@ function ListingsLoading() {
       <div className="mb-8">
         <Skeleton className="h-12 w-full" />
       </div>
-      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="space-y-3">
             <Skeleton className="h-[200px] w-full" />
