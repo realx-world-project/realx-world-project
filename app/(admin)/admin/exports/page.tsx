@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { Download, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -19,30 +19,21 @@ import { useToast } from "@/components/ui/use-toast";
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type ExportStatus = "PENDING" | "PROCESSING" | "DONE" | "FAILED";
-type ExportType = "listings-csv" | "listings-excel" | "users-csv";
+type ExportType = "LISTINGS_CSV" | "LISTINGS_EXCEL" | "USERS_CSV";
 
 interface ExportEntry {
   id: string;
   type: ExportType;
   status: ExportStatus;
   requestedAt: string;
-  completedAt?: string;
-  fileUrl?: string;
+  completedAt?: string | null;
+  fileUrl?: string | null;
 }
 
-// ── Mock export history ────────────────────────────────────────────────────
-
-const initialHistory: ExportEntry[] = [
-  { id: "exp_1", type: "listings-csv", status: "DONE", requestedAt: "2026-04-26T10:00:00Z", completedAt: "2026-04-26T10:01:30Z", fileUrl: "#" },
-  { id: "exp_2", type: "users-csv", status: "DONE", requestedAt: "2026-04-25T09:00:00Z", completedAt: "2026-04-25T09:00:45Z", fileUrl: "#" },
-  { id: "exp_3", type: "listings-excel", status: "FAILED", requestedAt: "2026-04-24T14:00:00Z" },
-  { id: "exp_4", type: "listings-csv", status: "PROCESSING", requestedAt: "2026-04-27T11:00:00Z" },
-];
-
 const exportTypeLabels: Record<ExportType, string> = {
-  "listings-csv": "Listings CSV",
-  "listings-excel": "Listings Excel",
-  "users-csv": "Users CSV",
+  LISTINGS_CSV: "Listings CSV",
+  LISTINGS_EXCEL: "Listings Excel",
+  USERS_CSV: "Users CSV",
 };
 
 const statusVariants: Record<ExportStatus, "warning" | "default" | "success" | "destructive"> = {
@@ -55,10 +46,76 @@ const statusVariants: Record<ExportStatus, "warning" | "default" | "success" | "
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function AdminExportsPage() {
-  const [exportType, setExportType] = useState<ExportType>("listings-csv");
+  const [exportType, setExportType] = useState<ExportType>("LISTINGS_CSV");
   const [requesting, setRequesting] = useState(false);
-  const [history, setHistory] = useState<ExportEntry[]>(initialHistory);
+  const [history, setHistory] = useState<ExportEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const { toast } = useToast();
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Load export history on mount
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/admin/exports");
+        if (res.ok) {
+          const data = await res.json();
+          setHistory(
+            (data.exports ?? []).map((e: any) => ({
+              id: e.id,
+              type: e.type as ExportType,
+              status: e.status as ExportStatus,
+              requestedAt: e.createdAt,
+              completedAt: e.completedAt ?? null,
+              fileUrl: e.fileUrl ?? null,
+            }))
+          );
+        }
+      } catch {}
+      setLoadingHistory(false);
+    };
+    load();
+  }, []);
+
+  // Poll every 3 s for any PENDING or PROCESSING entries; stop when all reach terminal state
+  useEffect(() => {
+    const pending = history.filter(
+      (e) => e.status === "PENDING" || e.status === "PROCESSING"
+    );
+
+    if (pending.length === 0) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+
+    pollRef.current = setInterval(async () => {
+      for (const entry of pending) {
+        try {
+          const res = await fetch(`/api/admin/exports/${entry.id}`);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const updated: Partial<ExportEntry> = {
+            status: data.status,
+            completedAt: data.completedAt ?? null,
+            fileUrl: data.fileUrl ?? null,
+          };
+          setHistory((prev) =>
+            prev.map((e) => (e.id === entry.id ? { ...e, ...updated } : e))
+          );
+        } catch {}
+      }
+    }, 3000);
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [history]);
 
   const requestExport = async () => {
     setRequesting(true);
@@ -68,26 +125,27 @@ export default function AdminExportsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: exportType }),
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json().catch(() => ({ id: `exp_${Date.now()}` }));
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error || "Request failed");
+      }
+      const data = await res.json();
       const newEntry: ExportEntry = {
-        id: data.id ?? `exp_${Date.now()}`,
+        id: data.exportId,
         type: exportType,
         status: "PENDING",
         requestedAt: new Date().toISOString(),
+        completedAt: null,
+        fileUrl: null,
       };
-      setHistory([newEntry, ...history]);
-      toast({ title: "Export requested", description: `Export ID: ${newEntry.id}` });
-    } catch {
-      // API not yet live — add a mock pending entry
-      const newEntry: ExportEntry = {
-        id: `exp_${Date.now()}`,
-        type: exportType,
-        status: "PENDING",
-        requestedAt: new Date().toISOString(),
-      };
-      setHistory([newEntry, ...history]);
-      toast({ title: "Export queued", description: "API not available yet — added to mock queue." });
+      setHistory((prev) => [newEntry, ...prev]);
+      toast({ title: "Export queued", description: `Export ID: ${data.exportId}` });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to request export.",
+        variant: "destructive",
+      });
     } finally {
       setRequesting(false);
     }
@@ -108,23 +166,24 @@ export default function AdminExportsPage() {
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Export Type</label>
-            <Select value={exportType} onValueChange={(v) => setExportType(v as ExportType)}>
+            <Select
+              value={exportType}
+              onValueChange={(v) => setExportType(v as ExportType)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="listings-csv">Listings CSV</SelectItem>
-                <SelectItem value="listings-excel">Listings Excel</SelectItem>
-                <SelectItem value="users-csv">Users CSV</SelectItem>
+                <SelectItem value="LISTINGS_CSV">Listings CSV</SelectItem>
+                <SelectItem value="LISTINGS_EXCEL">Listings Excel</SelectItem>
+                <SelectItem value="USERS_CSV">Users CSV</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <Button className="w-full" onClick={requestExport} disabled={requesting}>
-            {requesting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Requesting…</>
-            ) : (
-              "Request Export"
-            )}
+            {requesting
+              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Requesting…</>
+              : "Request Export"}
           </Button>
         </CardContent>
       </Card>
@@ -133,86 +192,103 @@ export default function AdminExportsPage() {
       <div>
         <h2 className="mb-4 text-xl font-semibold">Export History</h2>
 
-        {/* Desktop table */}
-        <div className="hidden rounded-lg border md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Requested</TableHead>
-                <TableHead>Completed</TableHead>
-                <TableHead>Download</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        {loadingHistory ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading history…
+          </div>
+        ) : history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No exports yet.</p>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden rounded-lg border md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Requested</TableHead>
+                    <TableHead>Completed</TableHead>
+                    <TableHead>Download</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="font-medium">
+                        {exportTypeLabels[entry.type] ?? entry.type}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {(entry.status === "PENDING" || entry.status === "PROCESSING") && (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                          )}
+                          <Badge variant={statusVariants[entry.status]}>
+                            {entry.status}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {format(new Date(entry.requestedAt), "MMM d, yyyy HH:mm")}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {entry.completedAt
+                          ? format(new Date(entry.completedAt), "MMM d, yyyy HH:mm")
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {entry.status === "DONE" && entry.fileUrl ? (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={entry.fileUrl} download>
+                              <Download className="mr-2 h-3.5 w-3.5" />
+                              Download
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="space-y-3 md:hidden">
               {history.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell className="font-medium">{exportTypeLabels[entry.type]}</TableCell>
-                  <TableCell>
+                <div key={entry.id} className="space-y-2 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{exportTypeLabels[entry.type] ?? entry.type}</p>
                     <div className="flex items-center gap-2">
                       {(entry.status === "PENDING" || entry.status === "PROCESSING") && (
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                       )}
                       <Badge variant={statusVariants[entry.status]}>{entry.status}</Badge>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(entry.requestedAt), "MMM d, yyyy HH:mm")}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {entry.completedAt ? format(new Date(entry.completedAt), "MMM d, yyyy HH:mm") : "—"}
-                  </TableCell>
-                  <TableCell>
-                    {entry.status === "DONE" && entry.fileUrl ? (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={entry.fileUrl} download>
-                          <Download className="mr-2 h-3.5 w-3.5" />
-                          Download
-                        </a>
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Mobile cards */}
-        <div className="space-y-3 md:hidden">
-          {history.map((entry) => (
-            <div key={entry.id} className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="font-medium">{exportTypeLabels[entry.type]}</p>
-                <div className="flex items-center gap-2">
-                  {(entry.status === "PENDING" || entry.status === "PROCESSING") && (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Requested {format(new Date(entry.requestedAt), "MMM d, yyyy HH:mm")}
+                  </p>
+                  {entry.completedAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Completed {format(new Date(entry.completedAt), "MMM d, yyyy HH:mm")}
+                    </p>
                   )}
-                  <Badge variant={statusVariants[entry.status]}>{entry.status}</Badge>
+                  {entry.status === "DONE" && entry.fileUrl && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={entry.fileUrl} download>
+                        <Download className="mr-2 h-3.5 w-3.5" />
+                        Download
+                      </a>
+                    </Button>
+                  )}
                 </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Requested {format(new Date(entry.requestedAt), "MMM d, yyyy HH:mm")}
-              </p>
-              {entry.completedAt && (
-                <p className="text-xs text-muted-foreground">
-                  Completed {format(new Date(entry.completedAt), "MMM d, yyyy HH:mm")}
-                </p>
-              )}
-              {entry.status === "DONE" && entry.fileUrl && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={entry.fileUrl} download>
-                    <Download className="mr-2 h-3.5 w-3.5" />
-                    Download
-                  </a>
-                </Button>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

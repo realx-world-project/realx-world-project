@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Filter, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -199,19 +199,33 @@ function FilterControls({
 
 export function SearchBar() {
   const router = useRouter();
-  const sp     = useSearchParams();
-
-  const priceMin = sp.get("priceMin") ?? "";
-  const priceMax = sp.get("priceMax") ?? "";
-  const currentPrice = priceMin ? `${priceMin}-${priceMax}` : "any";
+  const sp = useSearchParams();
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const [filters, setFilters] = useState<Filters>({
-    query:    sp.get("q")        ?? "",
-    type:     sp.get("type")     ?? "all",
-    category: sp.get("category") ?? "all",
-    state:    sp.get("state")    ?? "all",
-    price:    currentPrice,
+    query: "",
+    type: "all",
+    category: "all",
+    state: "all",
+    price: "any",
   });
+
+  // Sync with URL params after hydration
+  useEffect(() => {
+    const priceMin = sp.get("priceMin") ?? "";
+    const priceMax = sp.get("priceMax") ?? "";
+    const currentPrice = priceMin ? `${priceMin}-${priceMax}` : "any";
+
+    setFilters({
+      query: sp.get("q") ?? "",
+      type: sp.get("type") ?? "all",
+      category: sp.get("category") ?? "all",
+      state: sp.get("state") ?? "all",
+      price: currentPrice,
+    });
+    setIsHydrated(true);
+  }, [sp]);
+
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const setFilter = (key: keyof Filters, v: string) =>

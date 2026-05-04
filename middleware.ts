@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getToken } from "next-auth/jwt";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
@@ -33,7 +33,7 @@ function getClientIp(req: NextRequest): string {
   return "unknown";
 }
 
-const AUTH_LOGIN = "/auth/login";
+const AUTH_LOGIN = "/login";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -59,34 +59,42 @@ export async function middleware(req: NextRequest) {
 
   // Stricter rate limit for auth endpoints
   if (pathname.startsWith("/api/auth")) {
-    const { success } = await authLimiter.limit(ip);
+    try {
+      const { success } = await authLimiter.limit(ip);
+      if (!success) {
+        return NextResponse.json(
+          { error: "Too many requests", retryAfter: 60 },
+          { status: 429 }
+        );
+      }
+    } catch (e) {
+      console.error("Rate limit check failed:", e);
+    }
+    return NextResponse.next();
+  }
+
+  // Global rate limit for all other routes
+  try {
+    const { success } = await globalLimiter.limit(ip);
     if (!success) {
       return NextResponse.json(
         { error: "Too many requests", retryAfter: 60 },
         { status: 429 }
       );
     }
-    return NextResponse.next();
-  }
-
-  // Global rate limit for all other routes
-  const { success } = await globalLimiter.limit(ip);
-  if (!success) {
-    return NextResponse.json(
-      { error: "Too many requests", retryAfter: 60 },
-      { status: 429 }
-    );
+  } catch (e) {
+    console.error("Rate limit check failed:", e);
   }
 
   // Route protection
   if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) {
-    const session = await auth();
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-    if (!session?.user) {
+    if (!token) {
       return NextResponse.redirect(new URL(AUTH_LOGIN, req.url));
     }
 
-    if (pathname.startsWith("/admin") && (session.user as any).role !== "ADMIN") {
+    if (pathname.startsWith("/admin") && token.role !== "ADMIN") {
       return NextResponse.redirect(new URL(AUTH_LOGIN, req.url));
     }
   }

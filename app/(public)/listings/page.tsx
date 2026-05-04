@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
-import { ListingCard, Listing } from "@/components/listings/ListingCard";
+import { ListingCard, type Listing } from "@/components/listings/ListingCard";
 import { SearchBar } from "@/components/listings/SearchBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -13,92 +13,22 @@ import {
 } from "@/components/ui/pagination";
 import { House } from "lucide-react";
 
-// Mock data for listings (when API is unavailable)
-const mockListings: Listing[] = [
-  {
-    id: "1",
-    title: "3 Bedroom Flat in Lekki",
-    price: 15000000,
-    type: "SALE",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Lekki",
-    city: "Lekki",
-    state: "Lagos",
-    images: [],
-  },
-  {
-    id: "2",
-    title: "Luxury 4-Bedroom Detached House in Banana Island",
-    price: 250000000,
-    type: "SALE",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Banana Island, Ikoyi",
-    city: "Lagos",
-    state: "Lagos",
-    images: ["/placeholder.jpg"],
-    seller: { name: "John Doe", role: "AGENT" },
-  },
-  {
-    id: "3",
-    title: "Modern 3-Bedroom Flat in Victoria Island",
-    price: 85000000,
-    type: "RENT",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Victoria Island",
-    city: "Lagos",
-    state: "Lagos",
-    images: [],
-    seller: { name: "Jane Smith", role: "SELLER" },
-  },
-  {
-    id: "4",
-    title: "Commercial Plot of Land in Lekki",
-    price: 150000000,
-    type: "SALE",
-    category: "LAND",
-    status: "PUBLISHED",
-    location: "Lekki Peninsula",
-    city: "Lagos",
-    state: "Lagos",
-    images: [],
-    seller: { name: "Mike Johnson", role: "AGENT" },
-  },
-  {
-    id: "5",
-    title: "2 Bedroom Apartment in Ikeja GRA",
-    price: 6500000,
-    type: "RENT",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Ikeja GRA",
-    city: "Ikeja",
-    state: "Lagos",
-    images: [],
-    seller: { name: "Amaka Osei", role: "SELLER" },
-  },
-  {
-    id: "6",
-    title: "5 Bedroom Duplex in Asokoro",
-    price: 180000000,
-    type: "SALE",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Asokoro",
-    city: "Abuja",
-    state: "FCT",
-    images: [],
-    seller: { name: "Emeka Eze", role: "AGENT" },
-  },
-];
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Browse Properties | RealX World",
+  description:
+    "Find houses, land, and commercial properties for sale and rent in Nigeria",
+};
 
 interface SearchParams {
   q?: string;
   type?: string;
   category?: string;
   state?: string;
+  // SearchBar sends priceMin/priceMax in the URL
   priceMin?: string;
   priceMax?: string;
   page?: string;
@@ -108,96 +38,82 @@ interface ListingsPageProps {
   searchParams: Promise<SearchParams>;
 }
 
-export const metadata: Metadata = {
-  title: "Browse Properties | RealX World",
-  description:
-    "Find houses, land, and commercial properties for sale and rent in Nigeria",
-};
+function mapApiListing(raw: any): Listing {
+  return {
+    id: raw.id,
+    title: raw.title,
+    price: raw.price,
+    type: raw.type,
+    category: raw.category,
+    status: raw.status,
+    location: raw.location?.area || raw.location?.city || "",
+    city: raw.location?.city ?? "",
+    state: raw.location?.state ?? "",
+    address: raw.location?.address,
+    images: (raw.images ?? [])
+      .sort((a: any, b: any) => a.order - b.order)
+      .map((img: any) => img.url),
+    createdAt: raw.createdAt,
+  };
+}
 
-async function fetchListings(params: SearchParams) {
+async function fetchListings(
+  params: SearchParams
+): Promise<{ listings: Listing[]; total: number; page: number; totalPages: number }> {
   try {
-    const searchParams = new URLSearchParams();
-    
-    if (params.q) searchParams.set("q", params.q);
-    if (params.type) searchParams.set("type", params.type);
-    if (params.category) searchParams.set("category", params.category);
-    if (params.state) searchParams.set("state", params.state);
-    if (params.priceMin) searchParams.set("priceMin", params.priceMin);
-    if (params.priceMax) searchParams.set("priceMax", params.priceMax);
-    searchParams.set("page", params.page || "1");
-    searchParams.set("limit", "12");
+    const qs = new URLSearchParams();
+    if (params.q) qs.set("q", params.q);
+    if (params.type) qs.set("type", params.type);
+    if (params.category) qs.set("category", params.category);
+    if (params.state) qs.set("state", params.state);
+    // Translate URL param names to API schema names
+    if (params.priceMin) qs.set("minPrice", params.priceMin);
+    if (params.priceMax) qs.set("maxPrice", params.priceMax);
+    qs.set("page", params.page ?? "1");
+    qs.set("limit", "12");
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/listings/search?${searchParams.toString()}`,
-      { cache: "no-store" }
-    );
+    const res = await fetch(`${BASE_URL}/api/listings/search?${qs.toString()}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return { listings: [], total: 0, page: 1, totalPages: 1 };
 
-    if (!response.ok) {
-      throw new Error("API unavailable");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Failed to fetch listings:", error);
+    const data = await res.json();
+    return {
+      listings: (data.listings ?? []).map(mapApiListing),
+      total: data.total ?? 0,
+      page: data.page ?? 1,
+      totalPages: data.totalPages ?? 1,
+    };
+  } catch {
     return { listings: [], total: 0, page: 1, totalPages: 1 };
   }
 }
 
 async function ListingsContent({ searchParams }: ListingsPageProps) {
   const params = await searchParams;
-  const page = parseInt(params.page || "1");
-  
-  const data = await fetchListings(params);
-  const listings: Listing[] = data.listings?.length > 0 ? data.listings : mockListings;
-  const totalPages = data.totalPages || 1;
-  const total = data.total || listings.length;
-
-  // Filter mock data based on search params
-  let filteredListings = listings;
-  if (data.listings?.length === 0) {
-    filteredListings = mockListings.filter((listing) => {
-      if (params.type && listing.type !== params.type) return false;
-      if (params.category && listing.category !== params.category) return false;
-      if (params.state && listing.state !== params.state) return false;
-      if (params.q) {
-        const query = params.q.toLowerCase();
-        if (!listing.title.toLowerCase().includes(query) && 
-            !listing.location.toLowerCase().includes(query)) {
-          return false;
-        }
-      }
-      if (params.priceMin && listing.price < parseInt(params.priceMin)) return false;
-      if (params.priceMax && listing.price > parseInt(params.priceMax)) return false;
-      return true;
-    });
-  }
+  const page = parseInt(params.page ?? "1", 10);
+  const { listings, total, totalPages } = await fetchListings(params);
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Page Title */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold sm:text-3xl">Browse Properties</h1>
-        <p className="mt-2 text-muted-foreground">
-          Find your dream property in Nigeria
-        </p>
+        <p className="mt-2 text-muted-foreground">Find your dream property in Nigeria</p>
       </div>
 
-      {/* Search Bar */}
       <div className="mb-8">
         <SearchBar />
       </div>
 
-      {/* Results Count */}
       <div className="mb-6">
         <p className="text-sm text-muted-foreground">
-          {filteredListings.length} {filteredListings.length === 1 ? "property" : "properties"} found
+          {total} {total === 1 ? "property" : "properties"} found
         </p>
       </div>
 
-      {/* Listings Grid */}
-      {filteredListings.length > 0 ? (
+      {listings.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredListings.map((listing) => (
+          {listings.map((listing) => (
             <ListingCard
               key={listing.id}
               listing={listing}
@@ -207,7 +123,6 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
           ))}
         </div>
       ) : (
-        /* Empty State */
         <div className="flex flex-col items-center justify-center py-16">
           <House className="h-16 w-16 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-semibold">No listings found</h3>
@@ -217,7 +132,6 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-8">
           <Pagination>

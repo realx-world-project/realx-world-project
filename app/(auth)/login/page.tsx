@@ -11,12 +11,25 @@ import { AuthCard } from "@/components/forms/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 type LoginForm = {
   email: string;
   password: string;
 };
+
+function redirectPathForRole(role: string | undefined): string {
+  if (role === "ADMIN") return "/admin/dashboard";
+  if (role === "SELLER" || role === "AGENT") return "/dashboard/listings";
+  return "/dashboard";
+}
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -25,10 +38,7 @@ export default function LoginPage() {
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = async (data: LoginForm) => {
@@ -47,21 +57,11 @@ export default function LoginPage() {
         return;
       }
 
-      // Get session to determine role
       const session = await getSession();
-      if (session?.user?.role) {
-        if (session.user.role === "ADMIN") {
-          router.push("/admin/dashboard");
-        } else if (session.user.role === "SELLER" || session.user.role === "AGENT") {
-          router.push("/dashboard/listings");
-        } else {
-          router.push("/dashboard");
-        }
-      } else {
-        router.push("/dashboard");
-      }
-    } catch (err) {
-      setError("An error occurred during login");
+      const role = (session?.user as any)?.role as string | undefined;
+      router.push(redirectPathForRole(role));
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +92,11 @@ export default function LoginPage() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="Enter your password" {...field} />
+                  <Input
+                    type="password"
+                    placeholder="Enter your password"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -113,7 +117,7 @@ export default function LoginPage() {
 
       <div className="mt-4 text-center">
         <p className="text-sm text-gray-600">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="text-blue-600 hover:underline">
             Register
           </Link>

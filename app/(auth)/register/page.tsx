@@ -9,13 +9,35 @@ import { registerSchema } from "@/lib/validations/auth";
 import { AuthCard } from "@/components/forms/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
 import { z } from "zod";
 
 type RegisterForm = z.input<typeof registerSchema>;
+
+function formatError(error: unknown): string {
+  if (typeof error === "string") return error;
+  if (Array.isArray(error)) {
+    const first = error[0];
+    return first?.message ?? "Validation failed";
+  }
+  return "Something went wrong";
+}
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -42,27 +64,25 @@ export default function RegisterPage() {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
+      const json = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Registration failed");
+        setError(formatError(json.error));
+        return;
       }
 
       toast({
-        title: "Success",
-        description: "Account created successfully!",
+        title: "Account created",
+        description: "Welcome to RealX World! Please sign in.",
       });
 
-      setTimeout(() => {
-        router.push("/auth/login");
-      }, 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      router.push("/login");
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -135,7 +155,11 @@ export default function RegisterPage() {
               <FormItem>
                 <FormLabel>Confirm Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="Confirm your password" {...field} />
+                  <Input
+                    type="password"
+                    placeholder="Confirm your password"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -148,6 +172,7 @@ export default function RegisterPage() {
             render={({ field }: { field: any }) => (
               <FormItem>
                 <FormLabel>I am a...</FormLabel>
+                {/* value is the enum ("BUYER"/"SELLER"); label is display-only */}
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -179,7 +204,7 @@ export default function RegisterPage() {
       <div className="mt-4 text-center">
         <p className="text-sm text-gray-600">
           Already have an account?{" "}
-          <Link href="/auth/login" className="text-blue-600 hover:underline">
+          <Link href="/login" className="text-blue-600 hover:underline">
             Sign in
           </Link>
         </p>

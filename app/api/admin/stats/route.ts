@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     return session;
   }
 
-  const cached = await redis.get<string>(CACHE_KEY);
+  const cached = await redis.get(CACHE_KEY) as string | null;
   if (cached) {
     return NextResponse.json(cached);
   }

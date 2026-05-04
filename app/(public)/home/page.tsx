@@ -7,88 +7,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SearchBar } from "@/components/listings/SearchBar";
 import { ListingCard, type Listing } from "@/components/listings/ListingCard";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "RealX World — Nigeria's Property Marketplace",
-  description:
-    "Browse and list verified properties across Nigeria",
+  description: "Browse and list verified properties across Nigeria",
 };
 
-const mockListings: Listing[] = [
-  {
-    id: "h1",
-    title: "3 Bedroom Flat in Lekki",
-    price: 15_000_000,
-    type: "SALE",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Lekki",
-    city: "Lekki",
-    state: "Lagos",
-    images: [],
-    seller: { name: "John Doe", role: "AGENT" },
-  },
-  {
-    id: "h2",
-    title: "Luxury 4-Bedroom Detached House in Banana Island",
-    price: 250_000_000,
-    type: "SALE",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Banana Island, Ikoyi",
-    city: "Lagos",
-    state: "Lagos",
-    images: [],
-    seller: { name: "Jane Smith", role: "AGENT" },
-  },
-  {
-    id: "h3",
-    title: "Modern 3-Bedroom Flat in Victoria Island",
-    price: 85_000_000,
-    type: "RENT",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Victoria Island",
-    city: "Lagos",
-    state: "Lagos",
-    images: [],
-  },
-  {
-    id: "h4",
-    title: "Commercial Plot of Land in Lekki",
-    price: 150_000_000,
-    type: "SALE",
-    category: "LAND",
-    status: "PUBLISHED",
-    location: "Lekki Peninsula",
-    city: "Lagos",
-    state: "Lagos",
-    images: [],
-  },
-  {
-    id: "h5",
-    title: "5 Bedroom Duplex in Asokoro",
-    price: 180_000_000,
-    type: "SALE",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Asokoro",
-    city: "Abuja",
-    state: "FCT",
-    images: [],
-  },
-  {
-    id: "h6",
-    title: "2 Bedroom Apartment in Ikeja GRA",
-    price: 6_500_000,
-    type: "RENT",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Ikeja GRA",
-    city: "Ikeja",
-    state: "Lagos",
-    images: [],
-  },
-];
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+function mapApiListing(raw: any): Listing {
+  return {
+    id: raw.id,
+    title: raw.title,
+    price: raw.price,
+    type: raw.type,
+    category: raw.category,
+    status: raw.status,
+    location: raw.location?.area || raw.location?.city || "",
+    city: raw.location?.city ?? "",
+    state: raw.location?.state ?? "",
+    address: raw.location?.address,
+    images: (raw.images ?? [])
+      .sort((a: any, b: any) => a.order - b.order)
+      .map((img: any) => img.url),
+    createdAt: raw.createdAt,
+  };
+}
+
+async function fetchRecentListings(): Promise<Listing[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/listings?limit=6`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.listings ?? []).map(mapApiListing);
+  } catch {
+    return [];
+  }
+}
 
 const stats = [
   { icon: Building2, value: "500+", label: "Listings" },
@@ -100,24 +58,29 @@ const steps = [
   {
     number: "01",
     title: "List Your Property",
-    description:
-      "Create a detailed listing with photos, price, and location in minutes.",
+    description: "Create a detailed listing with photos, price, and location in minutes.",
   },
   {
     number: "02",
     title: "Get Verified",
-    description:
-      "Our team reviews your listing to ensure accuracy and trustworthiness.",
+    description: "Our team reviews your listing to ensure accuracy and trustworthiness.",
   },
   {
     number: "03",
     title: "Connect with Buyers",
-    description:
-      "Receive inquiries directly from interested buyers and agents.",
+    description: "Receive inquiries directly from interested buyers and agents.",
   },
 ];
 
-export default function HomePage() {
+function SearchBarFallback() {
+  return (
+    <div className="h-12 w-full animate-pulse rounded-lg bg-gray-200" />
+  );
+}
+
+export default async function HomePage() {
+  const listings = await fetchRecentListings();
+
   return (
     <div>
       {/* Hero */}
@@ -131,14 +94,12 @@ export default function HomePage() {
           </p>
 
           <div className="mx-auto mb-8 max-w-2xl rounded-xl bg-white p-3 shadow-lg">
-            <Suspense>
+            <Suspense fallback={<SearchBarFallback />}>
               <SearchBar />
             </Suspense>
           </div>
 
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            {/* Plain Links — shadcn Button inherits theme bg-background which
-                clashes with the blue hero, making text invisible on the default state. */}
             <Link
               href="/listings"
               className="inline-flex w-full items-center justify-center rounded-md bg-white px-6 py-3 font-medium text-blue-600 transition-colors hover:bg-blue-50 sm:w-auto"
@@ -179,11 +140,19 @@ export default function HomePage() {
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-2xl font-bold sm:text-3xl">Recent Listings</h2>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {mockListings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+
+          {listings.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {listings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          ) : (
+            <p className="py-8 text-center text-muted-foreground">
+              No listings available yet. Check back soon.
+            </p>
+          )}
+
           <div className="mt-10 text-center">
             <Button asChild variant="outline" size="lg">
               <Link href="/listings">

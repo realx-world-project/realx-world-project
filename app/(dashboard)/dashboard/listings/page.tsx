@@ -1,8 +1,12 @@
+import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Plus, Eye, MoreHorizontal } from "lucide-react";
+import { Plus, Eye } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,62 +17,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Listing } from "@/components/listings/ListingCard";
+import { type Listing } from "@/components/listings/ListingCard";
 import { House } from "lucide-react";
-
-// Mock data for user's listings
-const mockUserListings: Listing[] = [
-  {
-    id: "1",
-    title: "Luxury 4-Bedroom Detached House in Banana Island",
-    price: 250000000,
-    type: "SALE",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Banana Island, Ikoyi",
-    city: "Lagos",
-    state: "Lagos",
-    images: ["/placeholder.jpg"],
-    createdAt: "2024-01-15T10:00:00Z",
-  },
-  {
-    id: "2",
-    title: "Modern 3-Bedroom Flat in Victoria Island",
-    price: 85000000,
-    type: "RENT",
-    category: "RESIDENTIAL",
-    status: "PENDING",
-    location: "Victoria Island",
-    city: "Lagos",
-    state: "Lagos",
-    images: [],
-    createdAt: "2024-01-14T10:00:00Z",
-  },
-  {
-    id: "3",
-    title: "Commercial Plot of Land in Lekki",
-    price: 150000000,
-    type: "SALE",
-    category: "LAND",
-    status: "REJECTED",
-    location: "Lekki Peninsula",
-    city: "Lagos",
-    state: "Lagos",
-    images: [],
-    createdAt: "2024-01-13T10:00:00Z",
-  },
-];
 
 interface SearchParams {
   status?: string;
+  page?: string;
 }
 
 interface MyListingsPageProps {
@@ -80,57 +35,84 @@ export const metadata: Metadata = {
   description: "Manage your property listings",
 };
 
-// Format price as Nigerian Naira
-const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat("en-NG", {
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency: "NGN",
     maximumFractionDigits: 0,
   }).format(price);
+
+const statusVariants: Record<string, "warning" | "default" | "success" | "destructive"> = {
+  PENDING: "warning",
+  APPROVED: "default",
+  PUBLISHED: "success",
+  REJECTED: "destructive",
 };
 
-// Status badge variants
-const statusVariants = {
-  PENDING: "warning" as const,
-  APPROVED: "default" as const,
-  PUBLISHED: "success" as const,
-  REJECTED: "destructive" as const,
-};
-
-async function fetchUserListings() {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/listings/user`,
-      { cache: "no-store" }
-    );
-
-    if (!response.ok) {
-      throw new Error("API unavailable");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Failed to fetch user listings:", error);
-    return { listings: [], total: 0 };
-  }
+function mapListing(raw: any): Listing {
+  return {
+    id: raw.id,
+    title: raw.title,
+    price: raw.price,
+    type: raw.type,
+    category: raw.category,
+    status: raw.status,
+    location: raw.location?.area || raw.location?.city || "",
+    city: raw.location?.city || "",
+    state: raw.location?.state || "",
+    address: raw.location?.address,
+    images: (raw.images ?? []).map((img: any) => img.url),
+    createdAt: raw.createdAt,
+  };
 }
 
 async function ListingsContent({ searchParams }: MyListingsPageProps) {
   const params = await searchParams;
-  const statusFilter = params.status;
+  const statusFilter = params.status?.toUpperCase();
+  const page = Math.max(1, Number(params.page ?? 1));
 
-  const data = await fetchUserListings();
-  const listings: Listing[] = data.listings?.length > 0 ? data.listings : mockUserListings;
+  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const cookieStore = cookies();
+  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
+  const opts = { headers: { Cookie: cookieHeader }, cache: "no-store" as const };
 
-  // Filter by status if provided
-  const filteredListings = statusFilter
-    ? listings.filter((l) => l.status === statusFilter)
-    : listings;
+  let listings: Listing[] = [];
+  let total = 0;
+  let totalPages = 1;
+  let pendingCount = 0;
+  let publishedCount = 0;
+  let rejectedCount = 0;
 
-  // Group listings by status
-  const pendingListings = listings.filter((l) => l.status === "PENDING");
-  const publishedListings = listings.filter((l) => l.status === "PUBLISHED");
-  const rejectedListings = listings.filter((l) => l.status === "REJECTED");
+  try {
+    const statusQuery = statusFilter ? `&status=${statusFilter}` : "";
+
+    const [listingsRes, pendingRes, publishedRes, rejectedRes] = await Promise.all([
+      fetch(`${base}/api/user/listings?page=${page}${statusQuery}`, opts),
+      fetch(`${base}/api/user/listings?status=PENDING&limit=1`, opts),
+      fetch(`${base}/api/user/listings?status=PUBLISHED&limit=1`, opts),
+      fetch(`${base}/api/user/listings?status=REJECTED&limit=1`, opts),
+    ]);
+
+    if (listingsRes.ok) {
+      const d = await listingsRes.json();
+      listings = (d.listings ?? []).map(mapListing);
+      total = d.total ?? 0;
+      totalPages = d.totalPages ?? 1;
+    }
+    if (pendingRes.ok) pendingCount = (await pendingRes.json()).total ?? 0;
+    if (publishedRes.ok) publishedCount = (await publishedRes.json()).total ?? 0;
+    if (rejectedRes.ok) rejectedCount = (await rejectedRes.json()).total ?? 0;
+  } catch {}
+
+  const allCount = pendingCount + publishedCount + rejectedCount;
+  const activeTab = statusFilter || "all";
+
+  const tabItems = [
+    { value: "all", label: "All", count: allCount, href: "/dashboard/listings" },
+    { value: "PENDING", label: "Pending", count: pendingCount, href: "/dashboard/listings?status=PENDING" },
+    { value: "PUBLISHED", label: "Published", count: publishedCount, href: "/dashboard/listings?status=PUBLISHED" },
+    { value: "REJECTED", label: "Rejected", count: rejectedCount, href: "/dashboard/listings?status=REJECTED" },
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -138,9 +120,7 @@ async function ListingsContent({ searchParams }: MyListingsPageProps) {
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold sm:text-3xl">My Listings</h1>
-          <p className="mt-2 text-muted-foreground">
-            Manage your property listings
-          </p>
+          <p className="mt-2 text-muted-foreground">Manage your property listings</p>
         </div>
         <Link href="/dashboard/listings/new">
           <Button className="w-full sm:w-auto">
@@ -150,43 +130,49 @@ async function ListingsContent({ searchParams }: MyListingsPageProps) {
         </Link>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue={statusFilter || "all"} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">
-            All ({listings.length})
-          </TabsTrigger>
-          <TabsTrigger value="PENDING">
-            Pending ({pendingListings.length})
-          </TabsTrigger>
-          <TabsTrigger value="PUBLISHED">
-            Published ({publishedListings.length})
-          </TabsTrigger>
-          <TabsTrigger value="REJECTED">
-            Rejected ({rejectedListings.length})
-          </TabsTrigger>
-        </TabsList>
+      {/* URL-based tab navigation */}
+      <div className="mb-6 inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+        {tabItems.map((tab) => (
+          <Link
+            key={tab.value}
+            href={tab.href}
+            className={cn(
+              "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              activeTab === tab.value
+                ? "bg-background text-foreground shadow-sm"
+                : "hover:bg-background/50"
+            )}
+          >
+            {tab.label} ({tab.count})
+          </Link>
+        ))}
+      </div>
 
-        {/* All Listings */}
-        <TabsContent value="all" className="space-y-4">
-          <ListingsTable listings={listings} />
-        </TabsContent>
+      {/* Listings table */}
+      <ListingsTable listings={listings} />
 
-        {/* Pending Listings */}
-        <TabsContent value="PENDING" className="space-y-4">
-          <ListingsTable listings={pendingListings} />
-        </TabsContent>
-
-        {/* Published Listings */}
-        <TabsContent value="PUBLISHED" className="space-y-4">
-          <ListingsTable listings={publishedListings} />
-        </TabsContent>
-
-        {/* Rejected Listings */}
-        <TabsContent value="REJECTED" className="space-y-4">
-          <ListingsTable listings={rejectedListings} />
-        </TabsContent>
-      </Tabs>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-3">
+          {page > 1 && (
+            <Link
+              href={`/dashboard/listings?${statusFilter ? `status=${statusFilter}&` : ""}page=${page - 1}`}
+            >
+              <Button variant="outline" size="sm">Previous</Button>
+            </Link>
+          )}
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          {page < totalPages && (
+            <Link
+              href={`/dashboard/listings?${statusFilter ? `status=${statusFilter}&` : ""}page=${page + 1}`}
+            >
+              <Button variant="outline" size="sm">Next</Button>
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -196,11 +182,9 @@ function ListingsTable({ listings }: { listings: Listing[] }) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <House className="h-16 w-16 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-semibold">
-          You haven't listed any properties yet
-        </h3>
+        <h3 className="mt-4 text-lg font-semibold">No listings found</h3>
         <p className="mt-2 text-center text-muted-foreground">
-          Start by creating your first listing
+          Create your first listing to get started
         </p>
         <Link href="/dashboard/listings/new">
           <Button className="mt-4">
@@ -229,9 +213,7 @@ function ListingsTable({ listings }: { listings: Listing[] }) {
           <TableBody>
             {listings.map((listing) => (
               <TableRow key={listing.id}>
-                <TableCell className="font-medium">
-                  {listing.title}
-                </TableCell>
+                <TableCell className="font-medium">{listing.title}</TableCell>
                 <TableCell>
                   <Badge variant={statusVariants[listing.status]}>
                     {listing.status}
@@ -241,7 +223,7 @@ function ListingsTable({ listings }: { listings: Listing[] }) {
                 <TableCell>
                   {listing.createdAt
                     ? format(new Date(listing.createdAt), "MMM d, yyyy")
-                    : "-"}
+                    : "—"}
                 </TableCell>
                 <TableCell className="text-right">
                   <Link href={`/listings/${listing.id}`}>
@@ -258,7 +240,7 @@ function ListingsTable({ listings }: { listings: Listing[] }) {
       </div>
 
       {/* Mobile Cards */}
-      <div className="space-y-4 md:hidden">
+      <div className="space-y-4 p-4 md:hidden">
         {listings.map((listing) => (
           <div
             key={listing.id}
@@ -266,17 +248,13 @@ function ListingsTable({ listings }: { listings: Listing[] }) {
           >
             <div className="flex-1">
               <p className="font-medium">{listing.title}</p>
-              <p className="text-sm text-muted-foreground">
-                {formatPrice(listing.price)}
-              </p>
+              <p className="text-sm text-muted-foreground">{formatPrice(listing.price)}</p>
               <div className="mt-2 flex items-center gap-2">
-                <Badge variant={statusVariants[listing.status]}>
-                  {listing.status}
-                </Badge>
+                <Badge variant={statusVariants[listing.status]}>{listing.status}</Badge>
                 <span className="text-xs text-muted-foreground">
                   {listing.createdAt
                     ? format(new Date(listing.createdAt), "MMM d, yyyy")
-                    : "-"}
+                    : "—"}
                 </span>
               </div>
             </div>
@@ -294,8 +272,15 @@ function ListingsTable({ listings }: { listings: Listing[] }) {
 
 function ListingsLoading() {
   return (
-    <div className="space-y-4">
-      <Skeleton className="h-10 w-48" />
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8 flex items-start justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <Skeleton className="mb-6 h-10 w-72" />
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
@@ -314,7 +299,7 @@ function ListingsLoading() {
                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="ml-auto h-8 w-16" /></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -325,6 +310,9 @@ function ListingsLoading() {
 }
 
 export default async function MyListingsPage({ searchParams }: MyListingsPageProps) {
+  const session = await auth();
+  if (!session) redirect("/login");
+
   return (
     <Suspense fallback={<ListingsLoading />}>
       <ListingsContent searchParams={searchParams} />

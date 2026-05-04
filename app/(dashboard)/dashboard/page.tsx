@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,44 +26,22 @@ const sellerCards: QuickCard[] = [
   { icon: User, label: "Profile", href: "/dashboard/profile" },
 ];
 
-const mockRecentListings: Listing[] = [
-  {
-    id: "r1",
-    title: "3 Bedroom Flat in Lekki",
-    price: 15_000_000,
-    type: "SALE",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Lekki",
-    city: "Lekki",
-    state: "Lagos",
-    images: [],
-  },
-  {
-    id: "r2",
-    title: "2 Bedroom Apartment in Ikeja GRA",
-    price: 6_500_000,
-    type: "RENT",
-    category: "RESIDENTIAL",
-    status: "PUBLISHED",
-    location: "Ikeja GRA",
-    city: "Ikeja",
-    state: "Lagos",
-    images: [],
-  },
-  {
-    id: "r3",
-    title: "Commercial Plot of Land in Lekki",
-    price: 150_000_000,
-    type: "SALE",
-    category: "LAND",
-    status: "PUBLISHED",
-    location: "Lekki Peninsula",
-    city: "Lagos",
-    state: "Lagos",
-    images: [],
-  },
-];
+function mapListing(raw: any): Listing {
+  return {
+    id: raw.id,
+    title: raw.title,
+    price: raw.price,
+    type: raw.type,
+    category: raw.category,
+    status: raw.status,
+    location: raw.location?.area || raw.location?.city || "",
+    city: raw.location?.city || "",
+    state: raw.location?.state || "",
+    address: raw.location?.address,
+    images: (raw.images ?? []).map((img: any) => img.url),
+    createdAt: raw.createdAt,
+  };
+}
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -70,30 +49,45 @@ export default async function DashboardPage() {
 
   const role = (session.user as any).role as string;
   const name = session.user.name ?? "User";
+  const isSellerOrAgent = role === "SELLER" || role === "AGENT";
+
+  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const cookieStore = cookies();
+  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
+  const opts = { headers: { Cookie: cookieHeader }, cache: "no-store" as const };
 
   let pendingCount = 0;
+  let publishedCount = 0;
+  let rejectedCount = 0;
+  let savedCount = 0;
+  let recentListings: Listing[] = [];
+
   try {
-    // API not live — pending count stays 0
+    const fetches = await Promise.all([
+      isSellerOrAgent ? fetch(`${base}/api/user/listings?status=PENDING&limit=1`, opts) : null,
+      isSellerOrAgent ? fetch(`${base}/api/user/listings?status=PUBLISHED&limit=1`, opts) : null,
+      isSellerOrAgent ? fetch(`${base}/api/user/listings?status=REJECTED&limit=1`, opts) : null,
+      fetch(`${base}/api/user/saved-listings`, opts),
+      isSellerOrAgent ? fetch(`${base}/api/user/listings?limit=3`, opts) : null,
+    ]);
+
+    const [pendingRes, publishedRes, rejectedRes, savedRes, recentRes] = fetches;
+
+    if (pendingRes?.ok) pendingCount = (await pendingRes.json()).total ?? 0;
+    if (publishedRes?.ok) publishedCount = (await publishedRes.json()).total ?? 0;
+    if (rejectedRes?.ok) rejectedCount = (await rejectedRes.json()).total ?? 0;
+    if (savedRes?.ok) savedCount = (await savedRes.json()).savedListings?.length ?? 0;
+    if (recentRes?.ok) recentListings = ((await recentRes.json()).listings ?? []).map(mapListing);
   } catch {}
 
   const tipText =
     role === "BUYER"
-      ? "Browse the latest listings or check your saved properties."
-      : role === "SELLER"
-      ? `You have ${pendingCount} pending listings awaiting approval.`
-      : role === "AGENT"
-      ? "Manage your listings and track performance."
+      ? `You have ${savedCount} saved ${savedCount === 1 ? "property" : "properties"}.`
+      : isSellerOrAgent
+      ? `${pendingCount} pending · ${publishedCount} published · ${rejectedCount} rejected`
       : "Welcome to your dashboard.";
 
-  const isSellerOrAgent = role === "SELLER" || role === "AGENT";
   const quickCards = isSellerOrAgent ? sellerCards : buyerCards;
-
-  let recentListings: Listing[] = [];
-  try {
-    // API not live — recent listings stay empty
-  } catch {}
-  const displayListings =
-    recentListings.length > 0 ? recentListings : mockRecentListings;
 
   return (
     <div className="space-y-8">
@@ -131,17 +125,28 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Recent Activity */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold">Recent Listings</h2>
-        <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-4">
-          {displayListings.slice(0, 3).map((listing) => (
-            <div key={listing.id} className="w-[280px] flex-shrink-0">
-              <ListingCard listing={listing} />
+      {/* Recent Listings — sellers/agents only */}
+      {isSellerOrAgent && (
+        <section>
+          <h2 className="mb-4 text-lg font-semibold">Recent Listings</h2>
+          {recentListings.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No listings yet.{" "}
+              <Link href="/dashboard/listings/new" className="text-blue-600 underline">
+                Create your first one.
+              </Link>
+            </p>
+          ) : (
+            <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-4">
+              {recentListings.map((listing) => (
+                <div key={listing.id} className="w-[280px] flex-shrink-0">
+                  <ListingCard listing={listing} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          )}
+        </section>
+      )}
     </div>
   );
 }

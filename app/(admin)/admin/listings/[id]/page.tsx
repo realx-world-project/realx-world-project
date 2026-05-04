@@ -1,72 +1,16 @@
-"use client";
-
-import { useState } from "react";
+import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import {
-  ArrowLeft, MapPin, Calendar, User,
-  Loader2, CheckCircle, XCircle,
-} from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, User } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 import { ImageGallery } from "@/components/listings/ImageGallery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog, DialogContent, DialogHeader,
-  DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
-import { useParams } from "next/navigation";
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-interface AdminListingDetail {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  type: "SALE" | "RENT";
-  category: "RESIDENTIAL" | "COMMERCIAL" | "LAND";
-  status: "PENDING" | "APPROVED" | "REJECTED" | "PUBLISHED";
-  location: string;
-  city: string;
-  state: string;
-  address?: string;
-  images: string[];
-  createdAt: string;
-  seller: {
-    name: string;
-    email: string;
-    role: string;
-    createdAt: string;
-  };
-}
-
-// ── Mock data ──────────────────────────────────────────────────────────────
-
-const mockListing: AdminListingDetail = {
-  id: "mock-1",
-  title: "Luxury 4-Bedroom Detached House in Banana Island",
-  description: `This stunning luxury detached house is located in the prestigious Banana Island, Ikoyi, Lagos.\n\nThe property features:\n- 4 spacious bedrooms with en-suite bathrooms\n- Modern fully fitted kitchen with island counter\n- Large living and dining areas\n- Private swimming pool\n- 24/7 security and gated estate\n- Ample parking space\n- Well-manicured gardens\n\nPerfect for families looking for premium living in Lagos's most exclusive neighborhood.`,
-  price: 250_000_000,
-  type: "SALE",
-  category: "RESIDENTIAL",
-  status: "PENDING",
-  location: "Banana Island, Ikoyi",
-  city: "Lagos",
-  state: "Lagos",
-  address: "Plot 123, Banana Island Road, Ikoyi",
-  images: [],
-  createdAt: "2026-04-27T09:00:00Z",
-  seller: {
-    name: "John Doe",
-    email: "john@example.com",
-    role: "AGENT",
-    createdAt: "2025-01-15T00:00:00Z",
-  },
-};
+import { ModerationSidebar } from "./moderate-actions";
 
 const formatPrice = (n: number) =>
   new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n);
@@ -83,109 +27,29 @@ const statusVariants = {
   REJECTED: "destructive",
 } as const;
 
-// ── Approve button ─────────────────────────────────────────────────────────
+export default async function AdminListingReviewPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const session = await auth();
+  if (!session || (session.user as any).role !== "ADMIN") redirect("/login");
 
-function ApproveButton({ listingId }: { listingId: string }) {
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const cookieStore = cookies();
+  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
 
-  const approve = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/listings/${listingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "APPROVED" }),
-      });
-      if (!res.ok) throw new Error();
-      toast({ title: "Listing approved", description: "The listing is now approved." });
-    } catch {
-      toast({ title: "Error", description: "Could not approve listing.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch listing via public API (admin can access any status)
+  let raw: any = null;
+  try {
+    const res = await fetch(`${base}/api/listings/${params.id}`, {
+      headers: { Cookie: cookieHeader },
+      cache: "no-store",
+    });
+    if (res.ok) raw = await res.json();
+  } catch {}
 
-  return (
-    <Button className="w-full bg-green-600 hover:bg-green-700" onClick={approve} disabled={loading}>
-      {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-      Approve Listing
-    </Button>
-  );
-}
-
-// ── Reject button + dialog ─────────────────────────────────────────────────
-
-function RejectButton({ listingId }: { listingId: string }) {
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  const reject = async () => {
-    if (reason.trim().length < 10) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/listings/${listingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "REJECTED", reason }),
-      });
-      if (!res.ok) throw new Error();
-      toast({ title: "Listing rejected" });
-      setOpen(false);
-    } catch {
-      toast({ title: "Error", description: "Could not reject listing.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <>
-      <Button variant="outline" className="w-full border-red-300 text-red-600 hover:bg-red-50" onClick={() => setOpen(true)}>
-        <XCircle className="mr-2 h-4 w-4" />
-        Reject Listing
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Listing</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <label className="text-sm font-medium">Reason for rejection</label>
-            <Textarea
-              placeholder="Explain why this listing is being rejected (min 10 characters)…"
-              rows={4}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">{reason.length} / 10 min characters</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button variant="destructive" disabled={reason.trim().length < 10 || loading} onClick={reject}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Reject
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-// ── Page ───────────────────────────────────────────────────────────────────
-
-export default function AdminListingReviewPage() {
-  const { id } = useParams<{ id: string }>();
-
-  // In production this would be fetched server-side; using mock for now
-  const listing: AdminListingDetail | null =
-    id === "mock-1" || true ? { ...mockListing, id } : null;
-
-  if (!listing) {
+  if (!raw) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <h1 className="text-3xl font-bold">Listing Not Found</h1>
@@ -197,9 +61,28 @@ export default function AdminListingReviewPage() {
     );
   }
 
+  // Get full seller info — public API only returns seller name
+  const seller = raw.userId
+    ? await prisma.user.findUnique({
+        where: { id: raw.userId },
+        select: { name: true, email: true, role: true, createdAt: true },
+      })
+    : null;
+
+  const images: string[] = (raw.images ?? [])
+    .sort((a: any, b: any) => a.order - b.order)
+    .map((img: any) => img.url);
+
+  const location = raw.location;
+  const displayAddress = location?.address
+    || [location?.area, location?.city, location?.state].filter(Boolean).join(", ");
+
   return (
     <div className="space-y-6">
-      <Link href="/admin/listings" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        href="/admin/listings"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" />
         Back to Moderation Queue
       </Link>
@@ -207,31 +90,39 @@ export default function AdminListingReviewPage() {
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
-          <ImageGallery images={listing.images} title={listing.title} />
+          <ImageGallery images={images} title={raw.title} />
 
           <div>
             <div className="mb-3 flex flex-wrap gap-2">
-              <Badge className={typeClasses[listing.type]}>{listing.type}</Badge>
-              <Badge variant="outline">{listing.category}</Badge>
-              <Badge variant={statusVariants[listing.status]}>{listing.status}</Badge>
+              <Badge className={typeClasses[raw.type as keyof typeof typeClasses]}>
+                {raw.type}
+              </Badge>
+              <Badge variant="outline">{raw.category}</Badge>
+              <Badge variant={statusVariants[raw.status as keyof typeof statusVariants] ?? "default"}>
+                {raw.status}
+              </Badge>
             </div>
-            <h1 className="text-3xl font-bold">{listing.title}</h1>
+            <h1 className="text-3xl font-bold">{raw.title}</h1>
             <div className="mt-2 flex items-center gap-1 text-muted-foreground">
               <MapPin className="h-4 w-4 flex-shrink-0" />
-              <span>{listing.address ?? `${listing.location}, ${listing.city}, ${listing.state}`}</span>
+              <span>{displayAddress}</span>
             </div>
           </div>
 
           <p className="text-3xl font-bold text-primary">
-            {formatPrice(listing.price)}
-            {listing.type === "RENT" && <span className="ml-1 text-lg font-normal text-muted-foreground">/year</span>}
+            {formatPrice(raw.price)}
+            {raw.type === "RENT" && (
+              <span className="ml-1 text-lg font-normal text-muted-foreground">/year</span>
+            )}
           </p>
 
           <Separator />
 
           <div>
             <h2 className="mb-3 text-xl font-semibold">Description</h2>
-            <p className="whitespace-pre-wrap leading-relaxed text-muted-foreground">{listing.description}</p>
+            <p className="whitespace-pre-wrap leading-relaxed text-muted-foreground">
+              {raw.description}
+            </p>
           </div>
 
           <Separator />
@@ -245,13 +136,17 @@ export default function AdminListingReviewPage() {
                   <User className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold">{listing.seller.name}</p>
-                  <p className="text-sm text-muted-foreground">{listing.seller.email}</p>
+                  <p className="font-semibold">{seller?.name ?? raw.user?.name ?? "—"}</p>
+                  <p className="text-sm text-muted-foreground">{seller?.email ?? "—"}</p>
                   <div className="mt-1 flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">{listing.seller.role}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      Member since {format(new Date(listing.seller.createdAt), "MMMM yyyy")}
-                    </span>
+                    {seller?.role && (
+                      <Badge variant="outline" className="text-xs">{seller.role}</Badge>
+                    )}
+                    {seller?.createdAt && (
+                      <span className="text-xs text-muted-foreground">
+                        Member since {format(new Date(seller.createdAt), "MMMM yyyy")}
+                      </span>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -260,7 +155,7 @@ export default function AdminListingReviewPage() {
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            <span>Listed on {format(new Date(listing.createdAt), "MMMM d, yyyy")}</span>
+            <span>Listed on {format(new Date(raw.createdAt), "MMMM d, yyyy")}</span>
           </div>
         </div>
 
@@ -270,13 +165,8 @@ export default function AdminListingReviewPage() {
             <CardHeader>
               <CardTitle>Moderation Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <ApproveButton listingId={listing.id} />
-              <RejectButton listingId={listing.id} />
-              <Separator />
-              <Link href={`/listings/${listing.id}`} className="block" target="_blank">
-                <Button variant="ghost" className="w-full">View Public Listing ↗</Button>
-              </Link>
+            <CardContent>
+              <ModerationSidebar listingId={params.id} />
             </CardContent>
           </Card>
         </div>

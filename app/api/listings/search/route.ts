@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   );
   const cacheKey = `search:${sortedParams}`;
 
-  const cached = await redis.get<string>(cacheKey);
+  const cached = await redis.get(cacheKey) as string | null;
   if (cached) {
     return NextResponse.json(cached);
   }

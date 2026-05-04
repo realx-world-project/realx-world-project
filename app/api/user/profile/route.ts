@@ -8,6 +8,39 @@ const updateProfileSchema = z.object({
   phone: z.string(),
 });
 
+export async function GET(_request: NextRequest) {
+  const session = await requireRole(["ADMIN", "AGENT", "SELLER", "BUYER"]);
+
+  if (session instanceof NextResponse) {
+    return session;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user!.id as string },
+    select: {
+      name: true,
+      phone: true,
+      email: true,
+      role: true,
+      createdAt: true,
+      isVerified: true,
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    name: user.name ?? "",
+    phone: user.phone ?? "",
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt.toISOString(),
+    isVerified: user.isVerified,
+  });
+}
+
 export async function PATCH(request: NextRequest) {
   const session = await requireRole(["ADMIN", "AGENT", "SELLER", "BUYER"]);
 
@@ -44,5 +77,5 @@ export async function PATCH(request: NextRequest) {
     id: user.id,
     name: user.name,
     phone: user.phone,
-  }, { status: 200 });
+  });
 }

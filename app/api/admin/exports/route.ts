@@ -9,12 +9,32 @@ const exportSchema = z.object({
   type: z.enum(["LISTINGS_CSV", "LISTINGS_EXCEL", "USERS_CSV"]),
 });
 
+export async function GET(_request: NextRequest) {
+  const session = await requireRole(["ADMIN"]);
+  if (session instanceof NextResponse) return session;
+
+  const userId = session.user!.id as string;
+
+  const exports = await prisma.export.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      fileUrl: true,
+      createdAt: true,
+      completedAt: true,
+    },
+  });
+
+  return NextResponse.json({ exports });
+}
+
 export async function POST(request: NextRequest) {
   const session = await requireRole(["ADMIN"]);
-
-  if (session instanceof NextResponse) {
-    return session;
-  }
+  if (session instanceof NextResponse) return session;
 
   const adminId = session.user!.id as string;
   const rateLimit = await rateLimitByIP(`export:${adminId}`, 3, "1 h");

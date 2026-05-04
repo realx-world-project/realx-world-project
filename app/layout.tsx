@@ -2,10 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
 import { Providers } from "@/components/shared/Providers";
-import { Inter } from "next/font/google";
-import { cn } from "@/lib/utils";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "RealX World",
@@ -15,7 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(inter.className, "min-h-screen bg-background antialiased")}>
+      <body className="min-h-screen bg-background font-sans antialiased">
         <Providers>
           {children}
           <Toaster />

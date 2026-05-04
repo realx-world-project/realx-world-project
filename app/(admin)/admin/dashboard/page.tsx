@@ -1,6 +1,9 @@
+import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
-import { format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { Users, Clock, CheckCircle, Flag, ArrowRight } from "lucide-react";
 import { StatCard } from "@/components/admin/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,42 +14,51 @@ export const metadata: Metadata = {
   title: "Admin Dashboard | RealX World",
 };
 
-// ── Mock data ──────────────────────────────────────────────────────────────
-
-const mockStats = {
-  totalUsers: 124,
-  pendingListings: 8,
-  publishedListings: 56,
-  openReports: 3,
-};
-
-const mockActivity = [
-  { id: "1", action: "LISTING_CREATED", userEmail: "ada@example.com", entity: "Listing", entityId: "lst_1", createdAt: "2026-04-27T10:30:00Z" },
-  { id: "2", action: "LISTING_APPROVED", userEmail: "admin@realx.ng", entity: "Listing", entityId: "lst_2", createdAt: "2026-04-27T09:15:00Z" },
-  { id: "3", action: "USER_REGISTERED", userEmail: "emeka@example.com", entity: "User", entityId: "usr_3", createdAt: "2026-04-27T08:00:00Z" },
-  { id: "4", action: "REPORT_SUBMITTED", userEmail: "bola@example.com", entity: "Report", entityId: "rep_1", createdAt: "2026-04-26T22:45:00Z" },
-  { id: "5", action: "LOGIN", userEmail: "admin@realx.ng", entity: "User", entityId: "usr_1", createdAt: "2026-04-26T20:00:00Z" },
-];
-
-// ── Fetch (falls back to mock) ──────────────────────────────────────────────
-
-async function fetchStats() {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/admin/stats`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) throw new Error();
-    return res.json();
-  } catch {
-    return mockStats;
-  }
+interface AuditLogEntry {
+  id: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  meta: Record<string, unknown>;
+  createdAt: string;
+  user: { email: string };
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
+interface StatsResponse {
+  totalUsers: number;
+  listingsByStatus: { status: string; count: number }[];
+  pendingReports: number;
+  recentAuditLogs: AuditLogEntry[];
+}
 
 export default async function AdminDashboardPage() {
-  const stats = await fetchStats();
+  const session = await auth();
+  if (!session || (session.user as any).role !== "ADMIN") redirect("/login");
+
+  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const cookieStore = cookies();
+  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
+
+  let totalUsers = 0;
+  let pendingListings = 0;
+  let publishedListings = 0;
+  let openReports = 0;
+  let recentActivity: AuditLogEntry[] = [];
+
+  try {
+    const res = await fetch(`${base}/api/admin/stats`, {
+      headers: { Cookie: cookieHeader },
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const stats: StatsResponse = await res.json();
+      totalUsers = stats.totalUsers ?? 0;
+      pendingListings = stats.listingsByStatus?.find((l) => l.status === "PENDING")?.count ?? 0;
+      publishedListings = stats.listingsByStatus?.find((l) => l.status === "PUBLISHED")?.count ?? 0;
+      openReports = stats.pendingReports ?? 0;
+      recentActivity = stats.recentAuditLogs ?? [];
+    }
+  } catch {}
 
   return (
     <div className="space-y-8">
@@ -57,30 +69,10 @@ export default async function AdminDashboardPage() {
 
       {/* Stats grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Users"
-          value={stats.totalUsers ?? mockStats.totalUsers}
-          icon={<Users className="h-10 w-10" />}
-          color="blue"
-        />
-        <StatCard
-          title="Pending Listings"
-          value={stats.pendingListings ?? mockStats.pendingListings}
-          icon={<Clock className="h-10 w-10" />}
-          color="yellow"
-        />
-        <StatCard
-          title="Published Listings"
-          value={stats.publishedListings ?? mockStats.publishedListings}
-          icon={<CheckCircle className="h-10 w-10" />}
-          color="green"
-        />
-        <StatCard
-          title="Open Reports"
-          value={stats.openReports ?? mockStats.openReports}
-          icon={<Flag className="h-10 w-10" />}
-          color="red"
-        />
+        <StatCard title="Total Users" value={totalUsers} icon={<Users className="h-10 w-10" />} color="blue" />
+        <StatCard title="Pending Listings" value={pendingListings} icon={<Clock className="h-10 w-10" />} color="yellow" />
+        <StatCard title="Published Listings" value={publishedListings} icon={<CheckCircle className="h-10 w-10" />} color="green" />
+        <StatCard title="Open Reports" value={openReports} icon={<Flag className="h-10 w-10" />} color="red" />
       </div>
 
       {/* Activity + Quick actions */}
@@ -91,19 +83,23 @@ export default async function AdminDashboardPage() {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {mockActivity.map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between gap-4 text-sm">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="shrink-0 font-mono text-xs">
-                    {entry.action}
-                  </Badge>
-                  <span className="truncate text-muted-foreground">{entry.userEmail}</span>
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent activity.</p>
+            ) : (
+              recentActivity.slice(0, 8).map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between gap-4 text-sm">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Badge variant="outline" className="shrink-0 font-mono text-xs">
+                      {entry.action}
+                    </Badge>
+                    <span className="truncate text-muted-foreground">{entry.user?.email}</span>
+                  </div>
+                  <time className="shrink-0 text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
+                  </time>
                 </div>
-                <time className="shrink-0 text-xs text-muted-foreground">
-                  {format(new Date(entry.createdAt), "MMM d, HH:mm")}
-                </time>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
