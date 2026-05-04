@@ -16,23 +16,30 @@ export async function GET(request: NextRequest) {
 
   const where = { status: "PENDING" as const };
 
-  const [reports, total] = await Promise.all([
-    prisma.report.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        reason: true,
-        status: true,
-        createdAt: true,
-        listing: { select: { id: true, title: true } },
-        user: { select: { email: true } },
-      },
-    }),
-    prisma.report.count({ where }),
-  ]);
+  try {
+    await prisma.$connect();
 
-  return NextResponse.json({ reports, total, page, totalPages: Math.ceil(total / limit) });
+    const [reports, total] = await Promise.all([
+      prisma.report.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          reason: true,
+          status: true,
+          createdAt: true,
+          listing: { select: { id: true, title: true } },
+          user: { select: { email: true } },
+        },
+      }),
+      prisma.report.count({ where }),
+    ]);
+
+    return NextResponse.json({ reports, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error("[admin/reports] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

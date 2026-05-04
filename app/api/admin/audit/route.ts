@@ -32,24 +32,31 @@ export async function GET(request: NextRequest) {
     }),
   };
 
-  const [logs, total] = await Promise.all([
-    prisma.auditLog.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        action: true,
-        entity: true,
-        entityId: true,
-        meta: true,
-        createdAt: true,
-        user: { select: { email: true } },
-      },
-    }),
-    prisma.auditLog.count({ where }),
-  ]);
+  try {
+    await prisma.$connect();
 
-  return NextResponse.json({ logs, total, page, totalPages: Math.ceil(total / limit) });
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          action: true,
+          entity: true,
+          entityId: true,
+          meta: true,
+          createdAt: true,
+          user: { select: { email: true } },
+        },
+      }),
+      prisma.auditLog.count({ where }),
+    ]);
+
+    return NextResponse.json({ logs, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error("[admin/audit] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
