@@ -21,27 +21,34 @@ export async function GET(request: NextRequest) {
     ...(statusParam && { status: statusParam as any }),
   };
 
-  const [listings, total] = await Promise.all([
-    prisma.listing.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        type: true,
-        category: true,
-        status: true,
-        publishedAt: true,
-        createdAt: true,
-        images: { select: { url: true, isPrimary: true, order: true } },
-        location: { select: { state: true, city: true, area: true, address: true } },
-      },
-    }),
-    prisma.listing.count({ where }),
-  ]);
+  try {
+    await prisma.$connect();
 
-  return NextResponse.json({ listings, total, page, totalPages: Math.ceil(total / limit) });
+    const [listings, total] = await Promise.all([
+      prisma.listing.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          price: true,
+          type: true,
+          category: true,
+          status: true,
+          publishedAt: true,
+          createdAt: true,
+          images: { select: { url: true, isPrimary: true, order: true } },
+          location: { select: { state: true, city: true, area: true, address: true } },
+        },
+      }),
+      prisma.listing.count({ where }),
+    ]);
+
+    return NextResponse.json({ listings, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error("[user/listings GET] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

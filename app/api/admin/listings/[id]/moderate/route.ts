@@ -24,37 +24,44 @@ export async function PATCH(
   const listingId = params.id;
   const userId = session.user!.id as string;
 
-  const exists = await prisma.listing.findUnique({
-    where: { id: listingId },
-    select: { id: true },
-  });
+  try {
+    await prisma.$connect();
 
-  if (!exists) {
-    return NextResponse.json({ error: "Listing not found" }, { status: 404 });
-  }
-
-  const status = action === "APPROVE" ? "APPROVED" : "REJECTED";
-  const auditAction = action === "APPROVE" ? "LISTING_APPROVED" : "LISTING_REJECTED";
-
-  const listing = await prisma.$transaction(async (tx) => {
-    const updated = await tx.listing.update({
+    const exists = await prisma.listing.findUnique({
       where: { id: listingId },
-      data: { status },
-      select: { id: true, status: true },
+      select: { id: true },
     });
 
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: auditAction,
-        entity: "Listing",
-        entityId: listingId,
-        meta: { reason: reason ?? null },
-      },
+    if (!exists) {
+      return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+    }
+
+    const status = action === "APPROVE" ? "APPROVED" : "REJECTED";
+    const auditAction = action === "APPROVE" ? "LISTING_APPROVED" : "LISTING_REJECTED";
+
+    const listing = await prisma.$transaction(async (tx) => {
+      const updated = await tx.listing.update({
+        where: { id: listingId },
+        data: { status },
+        select: { id: true, status: true },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: auditAction,
+          entity: "Listing",
+          entityId: listingId,
+          meta: { reason: reason ?? null },
+        },
+      });
+
+      return updated;
     });
 
-    return updated;
-  });
-
-  return NextResponse.json({ id: listing.id, status: listing.status });
+    return NextResponse.json({ id: listing.id, status: listing.status });
+  } catch (err) {
+    console.error("[moderate] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

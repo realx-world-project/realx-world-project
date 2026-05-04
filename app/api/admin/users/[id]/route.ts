@@ -32,55 +32,62 @@ export async function PATCH(
   const targetId = params.id;
   const adminId = session.user!.id as string;
 
-  const target = await prisma.user.findUnique({
-    where: { id: targetId },
-    select: { id: true },
-  });
+  try {
+    await prisma.$connect();
 
-  if (!target) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
-  const { action } = parsed.data;
-
-  let updateData: Record<string, unknown>;
-  if (action === "SUSPEND") {
-    updateData = { isActive: false };
-  } else if (action === "UNSUSPEND") {
-    updateData = { isActive: true };
-  } else {
-    updateData = { role: parsed.data.role };
-  }
-
-  const user = await prisma.$transaction(async (tx) => {
-    const updated = await tx.user.update({
+    const target = await prisma.user.findUnique({
       where: { id: targetId },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        isVerified: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: { id: true },
     });
 
-    await tx.auditLog.create({
-      data: {
-        userId: adminId,
-        action,
-        entity: "User",
-        entityId: targetId,
-        meta: action === "CHANGE_ROLE" ? { role: parsed.data.role } : {},
-      },
+    if (!target) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const { action } = parsed.data;
+
+    let updateData: Record<string, unknown>;
+    if (action === "SUSPEND") {
+      updateData = { isActive: false };
+    } else if (action === "UNSUSPEND") {
+      updateData = { isActive: true };
+    } else {
+      updateData = { role: parsed.data.role };
+    }
+
+    const user = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: targetId },
+        data: updateData,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          isVerified: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: adminId,
+          action,
+          entity: "User",
+          entityId: targetId,
+          meta: action === "CHANGE_ROLE" ? { role: parsed.data.role } : {},
+        },
+      });
+
+      return updated;
     });
 
-    return updated;
-  });
-
-  return NextResponse.json(user);
+    return NextResponse.json(user);
+  } catch (err) {
+    console.error("[admin/users PATCH] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

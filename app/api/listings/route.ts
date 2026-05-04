@@ -33,55 +33,62 @@ export async function POST(request: NextRequest) {
   const { title, description, price, type, category, location, images } = parsed.data;
   const userId = session.user!.id as string;
 
-  const listing = await prisma.$transaction(async (tx) => {
-    const loc = await tx.location.create({
-      data: {
-        state: location.state,
-        city: location.city,
-        area: location.area ?? "",
-        address: location.address,
-        lat: location.lat,
-        lng: location.lng,
-      },
+  try {
+    await prisma.$connect();
+
+    const listing = await prisma.$transaction(async (tx) => {
+      const loc = await tx.location.create({
+        data: {
+          state: location.state,
+          city: location.city,
+          area: location.area ?? "",
+          address: location.address,
+          lat: location.lat,
+          lng: location.lng,
+        },
+      });
+
+      const created = await tx.listing.create({
+        data: {
+          title,
+          description,
+          price,
+          type,
+          category,
+          status: "PENDING",
+          userId,
+          locationId: loc.id,
+        },
+      });
+
+      await tx.listingImage.createMany({
+        data: images.map((img) => ({
+          listingId: created.id,
+          url: img.url,
+          publicId: img.publicId,
+          isPrimary: img.isPrimary,
+          order: img.order,
+        })),
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: "LISTING_CREATED",
+          entity: "Listing",
+          entityId: created.id,
+          meta: {},
+        },
+      });
+
+      return created;
     });
 
-    const created = await tx.listing.create({
-      data: {
-        title,
-        description,
-        price,
-        type,
-        category,
-        status: "PENDING",
-        userId,
-        locationId: loc.id,
-      },
-    });
-
-    await tx.listingImage.createMany({
-      data: images.map((img) => ({
-        listingId: created.id,
-        url: img.url,
-        publicId: img.publicId,
-        isPrimary: img.isPrimary,
-        order: img.order,
-      })),
-    });
-
-    await tx.auditLog.create({
-      data: {
-        userId,
-        action: "LISTING_CREATED",
-        entity: "Listing",
-        entityId: created.id,
-        meta: {},
-      },
-    });
-
-    return created;
-  });
-
-  return NextResponse.json({ id: listing.id, status: listing.status }, { status: 201 });
+    return NextResponse.json({ id: listing.id, status: listing.status }, { status: 201 });
+  } catch (err) {
+    console.error("[listings POST] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -98,16 +105,23 @@ export async function GET(request: NextRequest) {
     ? { status: statusParam }
     : { status: "PUBLISHED" };
 
-  const [listings, total] = await Promise.all([
-    prisma.listing.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      select: LISTING_SELECT,
-    }),
-    prisma.listing.count({ where }),
-  ]);
+  try {
+    await prisma.$connect();
 
-  return NextResponse.json({ listings, total, page, totalPages: Math.ceil(total / limit) });
+    const [listings, total] = await Promise.all([
+      prisma.listing.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: LISTING_SELECT,
+      }),
+      prisma.listing.count({ where }),
+    ]);
+
+    return NextResponse.json({ listings, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error("[listings GET] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

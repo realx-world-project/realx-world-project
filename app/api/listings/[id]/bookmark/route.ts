@@ -15,24 +15,31 @@ export async function POST(
   const userId = session.user!.id as string;
   const listingId = params.id;
 
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId },
-    select: { id: true },
-  });
+  try {
+    await prisma.$connect();
 
-  if (!listing) {
-    return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { id: true },
+    });
+
+    if (!listing) {
+      return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+    }
+
+    const existing = await prisma.savedListing.findFirst({
+      where: { userId, listingId },
+    });
+
+    if (existing) {
+      await prisma.savedListing.delete({ where: { id: existing.id } });
+      return NextResponse.json({ bookmarked: false });
+    }
+
+    await prisma.savedListing.create({ data: { userId, listingId } });
+    return NextResponse.json({ bookmarked: true });
+  } catch (err) {
+    console.error("[bookmark] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const existing = await prisma.savedListing.findFirst({
-    where: { userId, listingId },
-  });
-
-  if (existing) {
-    await prisma.savedListing.delete({ where: { id: existing.id } });
-    return NextResponse.json({ bookmarked: false });
-  }
-
-  await prisma.savedListing.create({ data: { userId, listingId } });
-  return NextResponse.json({ bookmarked: true });
 }
