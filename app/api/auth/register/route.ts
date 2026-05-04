@@ -19,35 +19,42 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
-  });
+  try {
+    await prisma.$connect();
 
-  if (existingUser) {
-    return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+    const existingUser = await prisma.user.findUnique({
+      where: { email: parsed.data.email },
+    });
+
+    if (existingUser) {
+      return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+    }
+
+    const passwordHash = await hash(parsed.data.password, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        passwordHash,
+        role: parsed.data.role,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "REGISTER",
+        entity: "User",
+        entityId: user.id,
+        meta: {},
+      },
+    });
+
+    return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
+  } catch (err) {
+    console.error("[register] error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const passwordHash = await hash(parsed.data.password, 12);
-
-  const user = await prisma.user.create({
-    data: {
-      name: parsed.data.name,
-      email: parsed.data.email,
-      phone: parsed.data.phone,
-      passwordHash,
-      role: parsed.data.role,
-    },
-  });
-
-  await prisma.auditLog.create({
-    data: {
-      userId: user.id,
-      action: "REGISTER",
-      entity: "User",
-      entityId: user.id,
-      meta: {},
-    },
-  });
-
-  return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
 }
