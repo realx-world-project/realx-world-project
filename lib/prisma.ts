@@ -8,3 +8,6 @@ declare global {
 export const prisma = globalThis.prisma ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
+
+// Eagerly open the connection pool so the first real request doesn't hit the cold-start timeout.
+prisma.$connect().catch(() => {});

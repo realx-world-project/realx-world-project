@@ -14,34 +14,33 @@ const config = {
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        if (!credentials?.email || !credentials.password) {
-          throw new Error("Email and password are required");
-        }
+        if (!credentials?.email || !credentials.password) return null;
 
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.passwordHash) {
-          throw new Error("Invalid credentials");
+        try {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user || !user.passwordHash) return null;
+
+          const isValid = await compare(password, user.passwordHash);
+          if (!isValid) return null;
+
+          await prisma.auditLog.create({
+            data: {
+              userId: user.id,
+              action: "LOGIN",
+              entity: "User",
+              entityId: user.id,
+              meta: {},
+            },
+          });
+
+          return { id: user.id, email: user.email, name: user.name, role: user.role };
+        } catch (err) {
+          console.error("[authorize] error:", err);
+          return null;
         }
-
-        const isValid = await compare(password, user.passwordHash);
-        if (!isValid) {
-          throw new Error("Invalid credentials");
-        }
-
-        await prisma.auditLog.create({
-          data: {
-            userId: user.id,
-            action: "LOGIN",
-            entity: "User",
-            entityId: user.id,
-            meta: {},
-          },
-        });
-
-        return user;
       },
     }),
   ],
