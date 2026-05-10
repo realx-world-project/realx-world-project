@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { registerSchema } from "@/lib/validations/auth";
 import { AuthCard } from "@/components/forms/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,20 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { z } from "zod";
 
-type RegisterForm = z.input<typeof registerSchema>;
+const formSchema = z.object({
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().regex(/^0[789][01]\d{8}$/, "Enter a valid Nigerian phone number"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+  role: z.enum(["BUYER", "SELLER"]),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type RegisterForm = z.infer<typeof formSchema>;
 
 function formatError(error: unknown): string {
   if (typeof error === "string") return error;
@@ -46,9 +58,10 @@ export default function RegisterPage() {
   const { toast } = useToast();
 
   const form = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       phone: "",
       password: "",
@@ -65,7 +78,14 @@ export default function RegisterPage() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          name: `${data.firstName} ${data.lastName}`,
+          email: data.email,
+          phone: data.phone,
+          password: data.password,
+          confirmPassword: data.confirmPassword,
+          role: data.role,
+        }),
       });
 
       const json = await response.json();
@@ -92,19 +112,34 @@ export default function RegisterPage() {
     <AuthCard title="Create Account" subtitle="Join RealX World today">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }: { field: any }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter your full name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }: { field: any }) => (
+                <FormItem>
+                  <FormLabel>First Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="First name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }: { field: any }) => (
+                <FormItem>
+                  <FormLabel>Last Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Last name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <FormField
             control={form.control}
@@ -172,7 +207,6 @@ export default function RegisterPage() {
             render={({ field }: { field: any }) => (
               <FormItem>
                 <FormLabel>I am a...</FormLabel>
-                {/* value is the enum ("BUYER"/"SELLER"); label is display-only */}
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>

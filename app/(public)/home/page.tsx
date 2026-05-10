@@ -79,7 +79,12 @@ function SearchBarFallback() {
 }
 
 export default async function HomePage() {
-  const listings = await fetchRecentListings();
+  let listings: Listing[] = [];
+  try {
+    listings = await fetchRecentListings();
+  } catch {
+    listings = [];
+  }
 
   return (
     <div>

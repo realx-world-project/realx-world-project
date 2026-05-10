@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
@@ -23,13 +25,13 @@ const nextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            // unsafe-inline intentionally omitted from script-src for production hardening.
-            // unsafe-eval is kept because Next.js requires it for chunk loading.
             value: [
               "default-src 'self'",
-              "img-src 'self' data: https://res.cloudinary.com https://*.cloudinary.com",
-              "script-src 'self' 'unsafe-eval'",
+              isDev
+                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
+                : "script-src 'self' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https://res.cloudinary.com https://*.cloudinary.com",
               "font-src 'self'",
               "connect-src 'self' https://*.upstash.io",
             ].join("; "),

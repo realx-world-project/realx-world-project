@@ -92,7 +92,17 @@ async function fetchListings(
 async function ListingsContent({ searchParams }: ListingsPageProps) {
   const params = await searchParams;
   const page = parseInt(params.page ?? "1", 10);
-  const { listings, total, totalPages } = await fetchListings(params);
+  let listings: Listing[] = [];
+  let total = 0;
+  let totalPages = 1;
+  try {
+    const result = await fetchListings(params);
+    listings = result.listings;
+    total = result.total;
+    totalPages = result.totalPages;
+  } catch {
+    // safe defaults already set above
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
