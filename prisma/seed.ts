@@ -22,7 +22,16 @@ const SEED_EMAILS = [
   "tunde.a@realxworld.net",
 ];
 
-const PLACEHOLDER_IMAGE = "https://placehold.co/800x600/1a1a1a/D4AF37?text=RealX+World";
+const PROPERTY_IMAGES = [
+  "https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/2102587/pexels-photo-2102587.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/1115804/pexels-photo-1115804.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/1974596/pexels-photo-1974596.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/2029667/pexels-photo-2029667.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/1029599/pexels-photo-1029599.jpeg?auto=compress&cs=tinysrgb&w=800",
+];
 
 // ─── Agents ──────────────────────────────────────────────────────────────────
 
@@ -396,12 +405,12 @@ export async function main() {
       },
     });
 
-    // Images — 2 per listing
+    // Images — 2 per listing, rotated across PROPERTY_IMAGES
     for (let j = 0; j < 2; j++) {
       await prisma.listingImage.create({
         data: {
           listingId: listing.id,
-          url: PLACEHOLDER_IMAGE,
+          url: PROPERTY_IMAGES[(i + j) % 8],
           publicId: `seed/listing-${i + 1}-img-${j + 1}`,
           isPrimary: j === 0,
           order: j,

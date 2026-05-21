@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/pagination";
 import { House } from "lucide-react";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const dynamic = "force-dynamic";
 
@@ -66,36 +65,43 @@ async function fetchListings(
     if (params.type) qs.set("type", params.type);
     if (params.category) qs.set("category", params.category);
     if (params.state) qs.set("state", params.state);
-    // Translate URL param names to API schema names
     if (params.priceMin) qs.set("minPrice", params.priceMin);
     if (params.priceMax) qs.set("maxPrice", params.priceMax);
     qs.set("page", params.page ?? "1");
     qs.set("limit", "12");
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
-    const res = await fetch(`${BASE_URL}/api/listings/search?${qs.toString()}`, {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const res = await fetch(`${baseUrl}/api/listings/search?${qs.toString()}`, {
       cache: "no-store",
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
 
-    if (!res.ok) return { listings: [], total: 0, page: 1, totalPages: 1 };
+    if (!res.ok) {
+      console.error("Listings fetch failed:", res.status);
+      return { listings: [], total: 0, page: 1, totalPages: 1 };
+    }
 
     const data = await res.json();
+    console.log("Listings fetched:", data.total);
     return {
       listings: (data.listings ?? []).map(mapApiListing),
       total: data.total ?? 0,
       page: data.page ?? 1,
       totalPages: data.totalPages ?? 1,
     };
-  } catch {
+  } catch (err) {
+    console.error("Listings fetch error:", err);
     return { listings: [], total: 0, page: 1, totalPages: 1 };
   }
 }
 
 async function ListingsContent({ searchParams }: ListingsPageProps) {
+  console.log("NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
   const params = await searchParams;
   const page = parseInt(params.page ?? "1", 10);
   let listings: Listing[] = [];

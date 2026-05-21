@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const baseLinks = [
@@ -30,9 +31,9 @@ export function DashboardSidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-white border-r hidden md:block">
-      <nav className="p-4">
-        <ul className="space-y-2">
+    <aside className="w-64 bg-white border-r hidden md:flex flex-col h-screen sticky top-0">
+      <nav className="flex flex-col h-full p-4">
+        <ul className="flex-1 space-y-2">
           {allLinks.map((link) => (
             <li key={link.href}>
               <Link
@@ -49,6 +50,16 @@ export function DashboardSidebar() {
             </li>
           ))}
         </ul>
+
+        <div className="mt-auto pt-4 border-t border-gray-200">
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex items-center gap-3 w-full px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </nav>
     </aside>
   );
