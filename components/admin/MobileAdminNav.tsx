@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-
-const Menu = () => <span>☰</span>;
 
 const links = [
   { href: "/admin/dashboard", label: "Overview" },
@@ -25,18 +24,18 @@ export function MobileAdminNav() {
     <div className="md:hidden">
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50">
-            <Menu />
+          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50 text-gray-700 hover:text-[#D4AF37]">
+            <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 bg-[#0A0A0A] border-r border-white/10">
-          <div className="p-4 border-b border-white/10">
+        <SheetContent side="left" className="w-64 bg-white border-r border-gray-100">
+          <div className="p-4 border-b border-gray-100">
             <span className="text-xs font-semibold uppercase tracking-widest text-[#D4AF37]">
               Admin Panel
             </span>
           </div>
           <nav className="mt-4 p-4">
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {links.map((link) => (
                 <li key={link.href}>
                   <Link
@@ -44,13 +43,13 @@ export function MobileAdminNav() {
                     className={cn(
                       "flex items-center justify-between px-4 py-2 rounded-md text-sm font-medium transition-colors",
                       pathname === link.href
-                        ? "bg-[#D4AF37] text-black font-semibold"
-                        : "text-gray-400 hover:text-[#D4AF37] hover:bg-white/5"
+                        ? "bg-[#D4AF37]/10 text-[#D4AF37] font-semibold border-l-2 border-[#D4AF37]"
+                        : "text-gray-600 hover:text-[#D4AF37] hover:bg-gray-50"
                     )}
                   >
                     <span>{link.label}</span>
                     {link.badge && (
-                      <Badge variant="secondary" className="ml-2 bg-white/10 text-gray-300">
+                      <Badge variant="secondary" className="ml-2">
                         {link.badge}
                       </Badge>
                     )}

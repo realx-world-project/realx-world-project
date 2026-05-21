@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Building2, Users, MapPin, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SearchBar } from "@/components/listings/SearchBar";
 import { ListingCard, type Listing } from "@/components/listings/ListingCard";
@@ -37,9 +36,15 @@ function mapApiListing(raw: any): Listing {
 
 async function fetchRecentListings(): Promise<Listing[]> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const res = await fetch(`${BASE_URL}/api/listings?limit=6`, {
       cache: "no-store",
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+
     if (!res.ok) return [];
     const data = await res.json();
     return (data.listings ?? []).map(mapApiListing);
@@ -159,18 +164,19 @@ export default async function HomePage() {
           )}
 
           <div className="mt-10 text-center">
-            <Button asChild variant="outline" size="lg" className="border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black">
-              <Link href="/listings">
-                View All Listings
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            <Link
+              href="/listings"
+              className="inline-flex items-center gap-2 px-6 py-3 border-2 border-[#D4AF37] text-[#D4AF37] font-semibold rounded-lg hover:bg-[#D4AF37] hover:text-black transition-all duration-200"
+            >
+              <span>View All Listings</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="bg-[#F9F8F4] py-12 sm:py-16">
+      <section className="bg-gray-50 py-12 sm:py-16">
         <div className="container mx-auto px-4">
           <div className="mb-10 text-center">
             <h2 className="text-2xl font-bold sm:text-3xl">How It Works</h2>

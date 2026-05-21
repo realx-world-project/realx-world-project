@@ -9,7 +9,7 @@ interface AuthCardProps {
 
 export function AuthCard({ title, subtitle, children }: AuthCardProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F9F8F4] py-12 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4">
       <div className="w-full max-w-md">
         <Card className="border-t-4 border-[#D4AF37] shadow-xl">
           <CardContent className="pt-8 pb-6 px-8">

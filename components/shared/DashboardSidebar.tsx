@@ -40,8 +40,8 @@ export function DashboardSidebar() {
                 className={cn(
                   "block px-4 py-2 rounded-md text-sm font-medium transition-colors",
                   pathname === link.href
-                    ? "bg-[#D4AF37] text-black font-semibold"
-                    : "text-gray-700 hover:text-[#D4AF37] hover:bg-gray-50"
+                    ? "bg-[#D4AF37]/10 text-[#D4AF37] font-semibold border-l-2 border-[#D4AF37]"
+                    : "text-gray-600 hover:text-[#D4AF37] hover:bg-gray-50"
                 )}
               >
                 {link.label}

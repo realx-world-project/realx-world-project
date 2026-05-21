@@ -18,14 +18,14 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-[#0A0A0A] border-r border-white/10 hidden md:block">
-      <div className="p-4 border-b border-white/10">
+    <aside className="w-64 bg-white border-r border-gray-100 hidden md:block">
+      <div className="p-4 border-b border-gray-100">
         <span className="text-xs font-semibold uppercase tracking-widest text-[#D4AF37]">
           Admin Panel
         </span>
       </div>
       <nav className="p-4">
-        <ul className="space-y-2">
+        <ul className="space-y-1">
           {links.map((link) => (
             <li key={link.href}>
               <Link
@@ -33,13 +33,13 @@ export function AdminSidebar() {
                 className={cn(
                   "flex items-center justify-between px-4 py-2 rounded-md text-sm font-medium transition-colors",
                   pathname === link.href
-                    ? "bg-[#D4AF37] text-black font-semibold"
-                    : "text-gray-400 hover:text-[#D4AF37] hover:bg-white/5"
+                    ? "bg-[#D4AF37]/10 text-[#D4AF37] font-semibold border-l-2 border-[#D4AF37]"
+                    : "text-gray-600 hover:text-[#D4AF37] hover:bg-gray-50"
                 )}
               >
                 <span>{link.label}</span>
                 {link.badge && (
-                  <Badge variant="secondary" className="ml-2 bg-white/10 text-gray-300">
+                  <Badge variant="secondary" className="ml-2">
                     {link.badge}
                   </Badge>
                 )}

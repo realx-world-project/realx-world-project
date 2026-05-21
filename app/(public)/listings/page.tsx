@@ -72,9 +72,15 @@ async function fetchListings(
     qs.set("page", params.page ?? "1");
     qs.set("limit", "12");
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const res = await fetch(`${BASE_URL}/api/listings/search?${qs.toString()}`, {
       cache: "no-store",
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+
     if (!res.ok) return { listings: [], total: 0, page: 1, totalPages: 1 };
 
     const data = await res.json();

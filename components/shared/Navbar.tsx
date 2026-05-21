@@ -3,6 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,8 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-
-const Menu = () => <span>☰</span>;
+import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -35,6 +36,7 @@ const getRoleVariant = (role: string) => {
 
 export function Navbar() {
   const { data: session } = useSession();
+  const pathname = usePathname();
 
   const userInitials = session?.user?.name
     ? session.user.name
@@ -45,50 +47,52 @@ export function Navbar() {
     : "U";
 
   return (
-    <nav className="border-b bg-black">
+    <nav className="sticky top-0 z-50 w-full bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/">
+          <Link href="/" className="flex items-center">
+            <div className="bg-white rounded p-1">
               <Image
                 src="/logo.jpeg"
                 alt="RealX World"
-                width={120}
-                height={40}
+                width={100}
+                height={33}
                 className="object-contain"
                 priority
               />
-            </Link>
-          </div>
+            </div>
+          </Link>
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-white hover:text-yellow-400 transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "text-sm font-medium transition-colors pb-0.5",
+                    isActive
+                      ? "text-[#D4AF37] font-semibold border-b-2 border-[#D4AF37]"
+                      : "text-gray-600 hover:text-[#D4AF37]"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Desktop Auth Section */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* Desktop Auth */}
+          <div className="hidden md:flex items-center space-x-3">
             {session ? (
               <>
                 <Badge variant={getRoleVariant(session.user.role)}>
                   {session.user.role}
                 </Badge>
-
-                {/*
-                  asChild delegates the trigger element to the explicit <button>
-                  below, preventing DropdownMenuTrigger from adding its own
-                  <button> wrapper around Avatar.
-                */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#D4AF37]">
@@ -97,7 +101,7 @@ export function Navbar() {
                       </Avatar>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
+                  <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard/listings">My Listings</Link>
                     </DropdownMenuItem>
@@ -118,13 +122,13 @@ export function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="border border-white text-white bg-transparent hover:bg-white hover:text-black transition-colors px-4 py-2 rounded-md text-sm font-medium"
+                  className="text-sm font-medium text-gray-700 hover:text-[#D4AF37] transition-colors"
                 >
                   Login
                 </Link>
                 <Link
                   href="/register"
-                  className="bg-[#D4AF37] hover:bg-[#B8961E] text-black font-semibold transition-colors px-4 py-2 rounded-md text-sm"
+                  className="bg-[#D4AF37] hover:bg-[#B8961E] text-black text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
                 >
                   Register
                 </Link>
@@ -133,83 +137,82 @@ export function Navbar() {
           </div>
 
           {/* Mobile Hamburger */}
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden">
             <Sheet>
-              {/*
-                asChild lets SheetTrigger use the Button element directly
-                instead of wrapping it in its own <button>, which would
-                produce a <button> inside a <button>.
-              */}
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:text-[#D4AF37]">
-                  <Menu />
+                <Button variant="ghost" size="icon" className="text-gray-700 hover:text-[#D4AF37]">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right">
-                <div className="flex flex-col space-y-4 mt-8">
-                  {navLinks.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="text-lg text-gray-700 hover:text-[#D4AF37] transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+              <SheetContent side="right" className="bg-white w-72">
+                <div className="flex flex-col h-full">
+                  <nav className="flex flex-col space-y-1 mt-8 flex-1">
+                    {navLinks.map((link) => {
+                      const isActive = pathname === link.href;
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          className={cn(
+                            "px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                            isActive
+                              ? "text-[#D4AF37] bg-[#D4AF37]/10 font-semibold"
+                              : "text-gray-700 hover:text-[#D4AF37] hover:bg-gray-50"
+                          )}
+                        >
+                          {link.label}
+                        </Link>
+                      );
+                    })}
+                  </nav>
 
-                  {session ? (
-                    <>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={getRoleVariant(session.user.role)}>
-                          {session.user.role}
-                        </Badge>
-                        <Avatar>
-                          <AvatarFallback>{userInitials}</AvatarFallback>
-                        </Avatar>
-                      </div>
-                      <Link
-                        href="/dashboard/listings"
-                        className="text-lg text-gray-700 hover:text-[#D4AF37] transition-colors"
-                      >
-                        My Listings
-                      </Link>
-                      <Link
-                        href="/dashboard/saved"
-                        className="text-lg text-gray-700 hover:text-[#D4AF37] transition-colors"
-                      >
-                        Saved Listings
-                      </Link>
-                      <Link
-                        href="/dashboard/profile"
-                        className="text-lg text-gray-700 hover:text-[#D4AF37] transition-colors"
-                      >
-                        Profile
-                      </Link>
-                      {/* Plain button — direct child of div, no nesting issue */}
-                      <Button
-                        variant="ghost"
-                        onClick={() => signOut()}
-                        className="justify-start"
-                      >
-                        Sign Out
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Link
-                        href="/login"
-                        className="block px-4 py-2 rounded-md text-sm font-medium border border-gray-300 text-gray-700 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors"
-                      >
-                        Login
-                      </Link>
-                      <Link
-                        href="/register"
-                        className="block px-4 py-2 rounded-md text-sm font-semibold bg-[#D4AF37] hover:bg-[#B8961E] text-black transition-colors"
-                      >
-                        Register
-                      </Link>
-                    </>
-                  )}
+                  <div className="border-t border-gray-100 pt-4 pb-6 space-y-1">
+                    {session ? (
+                      <>
+                        <div className="flex items-center space-x-2 px-4 py-2">
+                          <Avatar>
+                            <AvatarFallback>{userInitials}</AvatarFallback>
+                          </Avatar>
+                          <Badge variant={getRoleVariant(session.user.role)}>
+                            {session.user.role}
+                          </Badge>
+                        </div>
+                        <Link href="/dashboard/listings" className="block px-4 py-2 text-sm text-gray-700 hover:text-[#D4AF37] transition-colors">
+                          My Listings
+                        </Link>
+                        <Link href="/dashboard/saved" className="block px-4 py-2 text-sm text-gray-700 hover:text-[#D4AF37] transition-colors">
+                          Saved Listings
+                        </Link>
+                        <Link href="/dashboard/profile" className="block px-4 py-2 text-sm text-gray-700 hover:text-[#D4AF37] transition-colors">
+                          Profile
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          onClick={() => signOut()}
+                          className="w-full justify-start text-sm text-gray-700 hover:text-[#D4AF37] px-4"
+                        >
+                          Sign Out
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href="/login"
+                          className="block px-4 py-3 text-sm font-medium text-gray-700 hover:text-[#D4AF37] transition-colors"
+                        >
+                          Login
+                        </Link>
+                        <div className="px-4">
+                          <Link
+                            href="/register"
+                            className="block px-4 py-2 text-sm font-semibold text-center bg-[#D4AF37] hover:bg-[#B8961E] text-black rounded-lg transition-colors"
+                          >
+                            Register
+                          </Link>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
