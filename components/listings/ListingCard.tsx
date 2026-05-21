@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { MapPin, Bookmark, Home } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export interface Listing {
@@ -51,8 +50,8 @@ const statusOverlayClasses = {
 } as const;
 
 const typeClasses = {
-  SALE: "bg-blue-600 hover:bg-blue-700 text-white border-transparent",
-  RENT: "bg-green-600 hover:bg-green-700 text-white border-transparent",
+  SALE: "bg-[#D4AF37] hover:bg-[#B8961E] text-black border-transparent font-semibold",
+  RENT: "bg-black hover:bg-gray-900 text-[#D4AF37] border border-[#D4AF37]",
 } as const;
 
 export function ListingCard({
@@ -65,7 +64,6 @@ export function ListingCard({
   const primaryImage = listing.images?.[0] ?? null;
 
   const handleBookmarkClick = (e: React.MouseEvent) => {
-    e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) {
       router.push("/login");
@@ -75,83 +73,84 @@ export function ListingCard({
   };
 
   return (
-    <Link href={`/listings/${listing.id}`} className="block">
-      <Card className="group overflow-hidden rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-        {/* Image */}
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-          {primaryImage ? (
-            <Image
-              src={primaryImage}
-              alt={listing.title}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
-          ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted">
-              <Home className="h-12 w-12 text-muted-foreground/50" />
-              <span className="text-xs text-muted-foreground">No image</span>
-            </div>
-          )}
-
-          {/* Status badge — top-right, only if not PUBLISHED */}
-          {listing.status !== "PUBLISHED" && (
-            <span
-              className={cn(
-                "absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                statusOverlayClasses[listing.status as keyof typeof statusOverlayClasses]
-              )}
-            >
-              {listing.status}
-            </span>
-          )}
-
-          {/* Bookmark button */}
-          {isAuthenticated && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white"
-              onClick={handleBookmarkClick}
-              aria-label={isSaved ? "Remove bookmark" : "Save listing"}
-            >
-              <Bookmark
-                className={cn(
-                  "h-4 w-4",
-                  isSaved ? "fill-primary text-primary" : "text-muted-foreground"
-                )}
+    <div className="group relative">
+      <Link href={`/listings/${listing.id}`} className="block">
+        <Card className="overflow-hidden rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-[#D4AF37]">
+          {/* Image */}
+          <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+            {primaryImage ? (
+              <Image
+                src={primaryImage}
+                alt={listing.title}
+                fill
+                unoptimized
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               />
-            </Button>
-          )}
-        </div>
-
-        {/* Body */}
-        <CardContent className="p-4">
-          <p className="mb-1 text-xl font-bold text-primary">
-            {formatPrice(listing.price)}
-            {listing.type === "RENT" && (
-              <span className="ml-1 text-sm font-normal text-muted-foreground">/yr</span>
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted">
+                <Home className="h-12 w-12 text-muted-foreground/50" />
+                <span className="text-xs text-muted-foreground">No image</span>
+              </div>
             )}
-          </p>
-          <h3 className="mb-2 line-clamp-2 text-base font-medium leading-snug">
-            {listing.title}
-          </h3>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-            <span className="truncate">
-              {listing.city}, {listing.state}
-            </span>
-          </div>
-        </CardContent>
 
-        {/* Footer */}
-        <CardFooter className="flex gap-2 border-t p-4 pt-3">
-          <Badge className={typeClasses[listing.type]}>{listing.type}</Badge>
-          <Badge variant="outline" className="text-muted-foreground">
-            {listing.category}
-          </Badge>
-        </CardFooter>
-      </Card>
-    </Link>
+            {/* Status badge — top-right, only if not PUBLISHED */}
+            {listing.status !== "PUBLISHED" && (
+              <span
+                className={cn(
+                  "absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                  statusOverlayClasses[listing.status as keyof typeof statusOverlayClasses]
+                )}
+              >
+                {listing.status}
+              </span>
+            )}
+          </div>
+
+          {/* Body */}
+          <CardContent className="p-4">
+            <p className="mb-1 text-xl font-bold text-[#0A0A0A]">
+              {formatPrice(listing.price)}
+              {listing.type === "RENT" && (
+                <span className="ml-1 text-sm font-normal text-muted-foreground">/yr</span>
+              )}
+            </p>
+            <h3 className="mb-2 line-clamp-2 text-base font-medium leading-snug">
+              {listing.title}
+            </h3>
+            <div className="flex items-center gap-1 text-sm text-gray-500">
+              <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="truncate">
+                {listing.city}, {listing.state}
+              </span>
+            </div>
+          </CardContent>
+
+          {/* Footer */}
+          <CardFooter className="flex gap-2 border-t p-4 pt-3">
+            <Badge className={typeClasses[listing.type]}>{listing.type}</Badge>
+            <Badge variant="outline" className="text-muted-foreground">
+              {listing.category}
+            </Badge>
+          </CardFooter>
+        </Card>
+      </Link>
+
+      {/* Bookmark button sits outside <Link> to avoid nested interactive elements */}
+      {isAuthenticated && (
+        <button
+          onClick={handleBookmarkClick}
+          className="absolute left-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 hover:bg-white transition-colors"
+          aria-label={isSaved ? "Remove bookmark" : "Save listing"}
+        >
+          <Bookmark
+            className={cn(
+              "h-4 w-4",
+              isSaved ? "fill-[#D4AF37] text-[#D4AF37]" : "text-muted-foreground"
+            )}
+          />
+        </button>
+      )}
+    </div>
   );
 }

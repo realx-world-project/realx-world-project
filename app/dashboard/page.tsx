@@ -43,6 +43,15 @@ function mapListing(raw: any): Listing {
   };
 }
 
+function getRoleBadgeClass(role: string): string {
+  switch (role) {
+    case "SELLER": return "bg-[#D4AF37] text-black font-semibold border-transparent";
+    case "ADMIN":  return "bg-red-900 text-white border-transparent";
+    case "AGENT":  return "bg-green-900 text-white border-transparent";
+    default:       return "bg-gray-800 text-white border-transparent";
+  }
+}
+
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
@@ -92,12 +101,12 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+      <div className="rounded-xl bg-black p-6 text-white">
         <div className="mb-2 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">Welcome back, {name}</h1>
-          <Badge className="border-white/30 bg-white/20 text-white">{role}</Badge>
+          <Badge className={getRoleBadgeClass(role)}>{role}</Badge>
         </div>
-        <p className="text-sm text-blue-100">{tipText}</p>
+        <p className="text-sm text-gray-400">{tipText}</p>
       </div>
 
       {/* Quick Actions */}
@@ -108,15 +117,15 @@ export default async function DashboardPage() {
             const Icon = card.icon;
             return (
               <Link key={card.href} href={card.href}>
-                <Card className="group cursor-pointer transition-shadow hover:shadow-md">
+                <Card className="group cursor-pointer border-l-4 border-l-[#D4AF37] transition-shadow hover:shadow-md hover:border-[#D4AF37]">
                   <CardContent className="flex items-center justify-between p-5">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                        <Icon className="h-5 w-5 text-blue-600" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F9F8F4]">
+                        <Icon className="h-5 w-5 text-[#D4AF37]" />
                       </div>
                       <span className="font-medium">{card.label}</span>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-blue-600" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-[#D4AF37]" />
                   </CardContent>
                 </Card>
               </Link>
@@ -132,7 +141,7 @@ export default async function DashboardPage() {
           {recentListings.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No listings yet.{" "}
-              <Link href="/dashboard/listings/new" className="text-blue-600 underline">
+              <Link href="/dashboard/listings/new" className="text-[#D4AF37] hover:text-[#B8961E] underline">
                 Create your first one.
               </Link>
             </p>

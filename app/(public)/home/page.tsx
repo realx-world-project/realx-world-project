@@ -89,12 +89,12 @@ export default async function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-600 to-blue-800 py-16 text-white sm:py-24">
+      <section className="bg-gradient-to-br from-black to-gray-900 py-16 sm:py-24">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="mb-4 text-3xl font-bold sm:text-5xl">
+          <h1 className="mb-4 text-3xl font-bold text-[#D4AF37] sm:text-5xl">
             Find Your Perfect Property in Nigeria
           </h1>
-          <p className="mx-auto mb-8 max-w-2xl text-base text-blue-100 sm:text-lg">
+          <p className="mx-auto mb-8 max-w-2xl text-base text-gray-300 sm:text-lg">
             Browse verified listings from trusted agents and sellers
           </p>
 
@@ -107,13 +107,13 @@ export default async function HomePage() {
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
               href="/listings"
-              className="inline-flex w-full items-center justify-center rounded-md bg-white px-6 py-3 font-medium text-blue-600 transition-colors hover:bg-blue-50 sm:w-auto"
+              className="inline-flex w-full items-center justify-center rounded-md bg-[#D4AF37] px-6 py-3 font-semibold text-black transition-colors hover:bg-[#B8961E] sm:w-auto"
             >
               Browse Listings
             </Link>
             <Link
               href="/register"
-              className="inline-flex w-full items-center justify-center rounded-md border-2 border-white px-6 py-3 font-medium text-white transition-colors hover:bg-white hover:text-blue-600 sm:w-auto"
+              className="inline-flex w-full items-center justify-center rounded-md border-2 border-white px-6 py-3 font-medium text-white transition-colors hover:bg-white hover:text-black sm:w-auto"
             >
               List Your Property
             </Link>
@@ -122,16 +122,16 @@ export default async function HomePage() {
       </section>
 
       {/* Stats Strip */}
-      <section className="border-b bg-muted/30 py-10 sm:py-12">
+      <section className="border-b bg-[#0A0A0A] py-10 sm:py-12">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 gap-8 text-center sm:grid-cols-3">
             {stats.map((stat) => {
               const Icon = stat.icon;
               return (
                 <div key={stat.label} className="flex flex-col items-center gap-2">
-                  <Icon className="h-8 w-8 text-blue-600" />
-                  <p className="text-4xl font-bold text-blue-600">{stat.value}</p>
-                  <p className="text-muted-foreground">{stat.label}</p>
+                  <Icon className="h-8 w-8 text-[#D4AF37]" />
+                  <p className="text-4xl font-bold text-[#D4AF37]">{stat.value}</p>
+                  <p className="text-gray-300">{stat.label}</p>
                 </div>
               );
             })}
@@ -159,7 +159,7 @@ export default async function HomePage() {
           )}
 
           <div className="mt-10 text-center">
-            <Button asChild variant="outline" size="lg">
+            <Button asChild variant="outline" size="lg" className="border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black">
               <Link href="/listings">
                 View All Listings
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -170,7 +170,7 @@ export default async function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section className="bg-muted/30 py-12 sm:py-16">
+      <section className="bg-[#F9F8F4] py-12 sm:py-16">
         <div className="container mx-auto px-4">
           <div className="mb-10 text-center">
             <h2 className="text-2xl font-bold sm:text-3xl">How It Works</h2>
@@ -180,9 +180,9 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
             {steps.map((step, i) => (
-              <Card key={i} className="text-center">
+              <Card key={i} className="text-center border-t-2 border-[#D4AF37] shadow-sm">
                 <CardContent className="pt-8 pb-8">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#D4AF37] text-xl font-bold text-black">
                     {step.number}
                   </div>
                   <h3 className="mb-2 text-lg font-semibold">{step.title}</h3>
@@ -197,18 +197,21 @@ export default async function HomePage() {
       {/* CTA Banner */}
       <section className="py-12 sm:py-16">
         <div className="container mx-auto px-4">
-          <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 p-8 text-center text-white sm:p-12">
-            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-white/80" />
-            <h2 className="mb-3 text-2xl font-bold sm:text-3xl">
+          <div className="rounded-2xl bg-[#0A0A0A] p-8 text-center sm:p-12">
+            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-[#D4AF37]" />
+            <h2 className="mb-3 text-2xl font-bold text-white sm:text-3xl">
               Ready to list your property?
             </h2>
-            <p className="mx-auto mb-8 max-w-xl text-blue-100">
+            <p className="mx-auto mb-8 max-w-xl text-gray-400">
               Join thousands of sellers and agents on RealX World. Get your
               property in front of qualified buyers today.
             </p>
-            <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
-              <Link href="/register">Get Started for Free</Link>
-            </Button>
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center rounded-md bg-[#D4AF37] hover:bg-[#B8961E] px-8 py-3 font-semibold text-black transition-colors"
+            >
+              Get Started for Free
+            </Link>
           </div>
         </div>
       </section>

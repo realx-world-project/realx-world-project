@@ -229,7 +229,7 @@ export default function RegisterPage() {
             </Alert>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-[#D4AF37] hover:bg-[#B8961E] text-black font-semibold" disabled={isLoading}>
             {isLoading ? "Creating Account..." : "Create Account"}
           </Button>
         </form>
@@ -238,7 +238,7 @@ export default function RegisterPage() {
       <div className="mt-4 text-center">
         <p className="text-sm text-gray-600">
           Already have an account?{" "}
-          <Link href="/login" className="text-blue-600 hover:underline">
+          <Link href="/login" className="text-[#D4AF37] hover:text-[#B8961E] font-medium">
             Sign in
           </Link>
         </p>

@@ -7,6 +7,31 @@ const nextConfig = {
     serverComponentsExternalPackages: ["@prisma/client", "bcryptjs"],
   },
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.pexels.com",
+      },
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+      },
+    ],
+  },
+
   async headers() {
     return [
       {
@@ -31,7 +56,7 @@ const nextConfig = {
                 ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
                 : "script-src 'self' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https://res.cloudinary.com https://*.cloudinary.com",
+              "img-src 'self' data: https://res.cloudinary.com https://*.cloudinary.com https://images.unsplash.com https://images.pexels.com",
               "font-src 'self'",
               "connect-src 'self' https://*.upstash.io",
             ].join("; "),

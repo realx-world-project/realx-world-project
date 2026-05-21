@@ -109,7 +109,7 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-[#D4AF37] hover:bg-[#B8961E] text-black font-semibold" disabled={isLoading}>
             {isLoading ? "Signing In..." : "Sign In"}
           </Button>
         </form>
@@ -118,7 +118,7 @@ export default function LoginPage() {
       <div className="mt-4 text-center">
         <p className="text-sm text-gray-600">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-blue-600 hover:underline">
+          <Link href="/register" className="text-[#D4AF37] hover:text-[#B8961E] font-medium">
             Register
           </Link>
         </p>

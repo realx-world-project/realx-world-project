@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
 
 export default function NotFound() {
@@ -9,19 +8,21 @@ export default function NotFound() {
         <p className="text-8xl font-bold text-blue-600">404</p>
         <h1 className="mt-4 text-2xl font-bold">Page Not Found</h1>
         <p className="mt-2 text-muted-foreground">
-          Sorry, we couldn't find the page you're looking for.
+          Sorry, we couldn&apos;t find the page you&apos;re looking for.
         </p>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button asChild>
-          <Link href="/home">
-            <Home className="mr-2 h-4 w-4" />
-            Back to Home
-          </Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link href="/listings">Browse Listings</Link>
-        </Button>
+        <Link href="/">
+          <button className="flex items-center gap-2 px-6 py-3 bg-[#D4AF37] hover:bg-[#B8961E] text-black font-semibold rounded-lg transition-colors">
+            <Home className="w-4 h-4" />
+            <span>Back to Home</span>
+          </button>
+        </Link>
+        <Link href="/listings">
+          <button className="flex items-center gap-2 px-6 py-3 border border-gray-300 hover:bg-gray-100 text-gray-800 font-semibold rounded-lg transition-colors">
+            Browse Listings
+          </button>
+        </Link>
       </div>
       <p className="text-sm font-medium text-muted-foreground">RealX World</p>
     </div>

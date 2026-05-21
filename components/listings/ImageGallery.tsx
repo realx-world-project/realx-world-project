@@ -42,6 +42,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
           src={displayImages[currentIndex]}
           alt={`${title || "Property"} - Image ${currentIndex + 1}`}
           fill
+          unoptimized
           className="object-cover"
           priority
           sizes="(max-width: 768px) 100vw, 50vw"
@@ -99,6 +100,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
                 src={image}
                 alt={`Thumbnail ${index + 1}`}
                 fill
+                unoptimized
                 className="object-cover"
                 sizes="96px"
               />

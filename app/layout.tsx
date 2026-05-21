@@ -6,6 +6,10 @@ import { Providers } from "@/components/shared/Providers";
 export const metadata: Metadata = {
   title: "RealX World",
   description: "Nigeria-focused real estate listings and marketplace platform",
+  icons: {
+    icon: "/logo.jpeg",
+    apple: "/logo.jpeg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
