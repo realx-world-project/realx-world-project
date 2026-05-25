@@ -5,22 +5,45 @@ import { Button } from "@/components/ui/button";
 import { ListingCard, type Listing } from "@/components/listings/ListingCard";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Saved Listings | RealX World",
   description: "Your saved property listings",
 };
 
-async function fetchSavedListings(): Promise<Listing[]> {
+async function getSavedListings(userId: string): Promise<Listing[]> {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/user/saved-listings`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) throw new Error("API unavailable");
-    const data = await res.json();
-    return data.listings ?? [];
-  } catch {
+    const saved = await prisma.savedListing.findMany({
+      where: { userId },
+      include: {
+        listing: {
+          include: {
+            images: { where: { isPrimary: true }, take: 1 },
+            location: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return saved
+      .filter((s) => s.listing.status === "PUBLISHED")
+      .map((s) => ({
+        id: s.listing.id,
+        title: s.listing.title,
+        price: s.listing.price,
+        type: s.listing.type,
+        category: s.listing.category,
+        status: s.listing.status,
+        location: s.listing.location?.city ?? "",
+        city: s.listing.location?.city ?? "",
+        state: s.listing.location?.state ?? "",
+        address: s.listing.location?.address ?? undefined,
+        images: s.listing.images.map((img) => img.url),
+        createdAt: s.listing.createdAt.toISOString(),
+      }));
+  } catch (err) {
+    console.error("getSavedListings error:", err);
     return [];
   }
 }
@@ -29,7 +52,8 @@ export default async function SavedListingsPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const listings = await fetchSavedListings();
+  const userId = (session.user as any).id as string;
+  const listings = await getSavedListings(userId);
 
   return (
     <div className="space-y-8">

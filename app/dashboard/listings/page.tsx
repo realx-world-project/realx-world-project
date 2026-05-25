@@ -1,5 +1,4 @@
 import { auth } from "@/lib/auth";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Metadata } from "next";
@@ -20,6 +19,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Listing } from "@/components/listings/ListingCard";
 import { House } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 
 interface SearchParams {
   status?: string;
@@ -57,24 +57,24 @@ function mapListing(raw: any): Listing {
     type: raw.type,
     category: raw.category,
     status: raw.status,
-    location: raw.location?.area || raw.location?.city || "",
-    city: raw.location?.city || "",
-    state: raw.location?.state || "",
-    address: raw.location?.address,
+    location: raw.location?.city ?? "",
+    city: raw.location?.city ?? "",
+    state: raw.location?.state ?? "",
+    address: raw.location?.address ?? undefined,
     images: (raw.images ?? []).map((img: any) => img.url),
-    createdAt: raw.createdAt,
+    createdAt: raw.createdAt instanceof Date ? raw.createdAt.toISOString() : raw.createdAt,
   };
 }
 
 async function ListingsContent({ searchParams }: MyListingsPageProps) {
+  const session = await auth();
+  if (!session) redirect("/login");
+
   const params = await searchParams;
   const statusFilter = params.status?.toUpperCase();
   const page = Math.max(1, Number(params.page ?? 1));
-
-  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const cookieStore = cookies();
-  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
-  const opts = { headers: { Cookie: cookieHeader }, cache: "no-store" as const };
+  const limit = 12;
+  const userId = (session.user as any).id as string;
 
   let listings: Listing[] = [];
   let total = 0;
@@ -84,24 +84,32 @@ async function ListingsContent({ searchParams }: MyListingsPageProps) {
   let rejectedCount = 0;
 
   try {
-    const statusQuery = statusFilter ? `&status=${statusFilter}` : "";
+    const where: any = { userId };
+    if (statusFilter) where.status = statusFilter;
 
-    const [listingsRes, pendingRes, publishedRes, rejectedRes] = await Promise.all([
-      fetch(`${base}/api/user/listings?page=${page}${statusQuery}`, opts),
-      fetch(`${base}/api/user/listings?status=PENDING&limit=1`, opts),
-      fetch(`${base}/api/user/listings?status=PUBLISHED&limit=1`, opts),
-      fetch(`${base}/api/user/listings?status=REJECTED&limit=1`, opts),
+    const [rows, totalCount, pending, published, rejected] = await Promise.all([
+      prisma.listing.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          images: { where: { isPrimary: true }, take: 1 },
+          location: true,
+        },
+      }),
+      prisma.listing.count({ where }),
+      prisma.listing.count({ where: { userId, status: "PENDING" } }),
+      prisma.listing.count({ where: { userId, status: "PUBLISHED" } }),
+      prisma.listing.count({ where: { userId, status: "REJECTED" } }),
     ]);
 
-    if (listingsRes.ok) {
-      const d = await listingsRes.json();
-      listings = (d.listings ?? []).map(mapListing);
-      total = d.total ?? 0;
-      totalPages = d.totalPages ?? 1;
-    }
-    if (pendingRes.ok) pendingCount = (await pendingRes.json()).total ?? 0;
-    if (publishedRes.ok) publishedCount = (await publishedRes.json()).total ?? 0;
-    if (rejectedRes.ok) rejectedCount = (await rejectedRes.json()).total ?? 0;
+    listings = rows.map(mapListing);
+    total = totalCount;
+    totalPages = Math.ceil(total / limit);
+    pendingCount = pending;
+    publishedCount = published;
+    rejectedCount = rejected;
   } catch {}
 
   const allCount = pendingCount + publishedCount + rejectedCount;
@@ -310,9 +318,6 @@ function ListingsLoading() {
 }
 
 export default async function MyListingsPage({ searchParams }: MyListingsPageProps) {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   return (
     <Suspense fallback={<ListingsLoading />}>
       <ListingsContent searchParams={searchParams} />

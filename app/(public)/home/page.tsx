@@ -5,6 +5,7 @@ import { ArrowRight, Building2, Users, MapPin, CheckCircle2 } from "lucide-react
 import { Card, CardContent } from "@/components/ui/card";
 import { SearchBar } from "@/components/listings/SearchBar";
 import { ListingCard, type Listing } from "@/components/listings/ListingCard";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -13,42 +14,33 @@ export const metadata: Metadata = {
   description: "Browse and list verified properties across Nigeria",
 };
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
-function mapApiListing(raw: any): Listing {
-  return {
-    id: raw.id,
-    title: raw.title,
-    price: raw.price,
-    type: raw.type,
-    category: raw.category,
-    status: raw.status,
-    location: raw.location?.area || raw.location?.city || "",
-    city: raw.location?.city ?? "",
-    state: raw.location?.state ?? "",
-    address: raw.location?.address,
-    images: (raw.images ?? [])
-      .sort((a: any, b: any) => a.order - b.order)
-      .map((img: any) => img.url),
-    createdAt: raw.createdAt,
-  };
-}
-
-async function fetchRecentListings(): Promise<Listing[]> {
+async function getRecentListings(): Promise<Listing[]> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const res = await fetch(`${BASE_URL}/api/listings?limit=6`, {
-      cache: "no-store",
-      signal: controller.signal,
+    const rows = await prisma.listing.findMany({
+      where: { status: "PUBLISHED" },
+      take: 6,
+      orderBy: { publishedAt: "desc" },
+      include: {
+        images: { where: { isPrimary: true }, take: 1 },
+        location: true,
+      },
     });
-    clearTimeout(timeoutId);
-
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.listings ?? []).map(mapApiListing);
-  } catch {
+    return rows.map((l) => ({
+      id: l.id,
+      title: l.title,
+      price: l.price,
+      type: l.type,
+      category: l.category,
+      status: l.status,
+      location: l.location?.city ?? "",
+      city: l.location?.city ?? "",
+      state: l.location?.state ?? "",
+      address: l.location?.address ?? undefined,
+      images: l.images.map((img) => img.url),
+      createdAt: l.createdAt.toISOString(),
+    }));
+  } catch (err) {
+    console.error("getRecentListings error:", err);
     return [];
   }
 }
@@ -84,12 +76,7 @@ function SearchBarFallback() {
 }
 
 export default async function HomePage() {
-  let listings: Listing[] = [];
-  try {
-    listings = await fetchRecentListings();
-  } catch {
-    listings = [];
-  }
+  const listings = await getRecentListings();
 
   return (
     <div>

@@ -12,6 +12,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { House } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 
 
 export const dynamic = "force-dynamic";
@@ -37,84 +38,80 @@ interface ListingsPageProps {
   searchParams: Promise<SearchParams>;
 }
 
-function mapApiListing(raw: any): Listing {
-  return {
-    id: raw.id,
-    title: raw.title,
-    price: raw.price,
-    type: raw.type,
-    category: raw.category,
-    status: raw.status,
-    location: raw.location?.area || raw.location?.city || "",
-    city: raw.location?.city ?? "",
-    state: raw.location?.state ?? "",
-    address: raw.location?.address,
-    images: (raw.images ?? [])
-      .sort((a: any, b: any) => a.order - b.order)
-      .map((img: any) => img.url),
-    createdAt: raw.createdAt,
-  };
-}
-
-async function fetchListings(
-  params: SearchParams
-): Promise<{ listings: Listing[]; total: number; page: number; totalPages: number }> {
+async function getListings(params: SearchParams): Promise<{
+  listings: Listing[];
+  total: number;
+  page: number;
+  totalPages: number;
+}> {
   try {
-    const qs = new URLSearchParams();
-    if (params.q) qs.set("q", params.q);
-    if (params.type) qs.set("type", params.type);
-    if (params.category) qs.set("category", params.category);
-    if (params.state) qs.set("state", params.state);
-    if (params.priceMin) qs.set("minPrice", params.priceMin);
-    if (params.priceMax) qs.set("maxPrice", params.priceMax);
-    qs.set("page", params.page ?? "1");
-    qs.set("limit", "12");
+    const page = Math.max(1, parseInt(params.page ?? "1", 10));
+    const limit = 12;
+    const skip = (page - 1) * limit;
 
-    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+    const where: any = { status: "PUBLISHED" };
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    const res = await fetch(`${baseUrl}/api/listings/search?${qs.toString()}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      console.error("Listings fetch failed:", res.status);
-      return { listings: [], total: 0, page: 1, totalPages: 1 };
+    if (params.type && params.type !== "all") where.type = params.type;
+    if (params.category && params.category !== "all") where.category = params.category;
+    if (params.q) {
+      where.OR = [
+        { title: { contains: params.q, mode: "insensitive" } },
+        { description: { contains: params.q, mode: "insensitive" } },
+      ];
+    }
+    if (params.state && params.state !== "all") {
+      where.location = { state: { contains: params.state, mode: "insensitive" } };
+    }
+    if (params.priceMin || params.priceMax) {
+      where.price = {};
+      if (params.priceMin) where.price.gte = Number(params.priceMin);
+      if (params.priceMax) where.price.lte = Number(params.priceMax);
     }
 
-    const data = await res.json();
-    console.log("Listings fetched:", data.total);
+    const [rows, total] = await Promise.all([
+      prisma.listing.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { publishedAt: "desc" },
+        include: {
+          images: { where: { isPrimary: true }, take: 1 },
+          location: true,
+        },
+      }),
+      prisma.listing.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
     return {
-      listings: (data.listings ?? []).map(mapApiListing),
-      total: data.total ?? 0,
-      page: data.page ?? 1,
-      totalPages: data.totalPages ?? 1,
+      listings: rows.map((l) => ({
+        id: l.id,
+        title: l.title,
+        price: l.price,
+        type: l.type,
+        category: l.category,
+        status: l.status,
+        location: l.location?.city ?? "",
+        city: l.location?.city ?? "",
+        state: l.location?.state ?? "",
+        address: l.location?.address ?? undefined,
+        images: l.images.map((img) => img.url),
+        createdAt: l.createdAt.toISOString(),
+      })),
+      total,
+      totalPages,
+      page,
     };
   } catch (err) {
-    console.error("Listings fetch error:", err);
-    return { listings: [], total: 0, page: 1, totalPages: 1 };
+    console.error("getListings error:", err);
+    return { listings: [], total: 0, totalPages: 1, page: 1 };
   }
 }
 
 async function ListingsContent({ searchParams }: ListingsPageProps) {
-  console.log("NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
   const params = await searchParams;
-  const page = parseInt(params.page ?? "1", 10);
-  let listings: Listing[] = [];
-  let total = 0;
-  let totalPages = 1;
-  try {
-    const result = await fetchListings(params);
-    listings = result.listings;
-    total = result.total;
-    totalPages = result.totalPages;
-  } catch {
-    // safe defaults already set above
-  }
+  const { listings, total, totalPages, page } = await getListings(params);
 
   return (
     <div className="container mx-auto px-4 py-8">

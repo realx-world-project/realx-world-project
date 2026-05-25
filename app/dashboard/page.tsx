@@ -1,5 +1,4 @@
 import { auth } from "@/lib/auth";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ListingCard, type Listing } from "@/components/listings/ListingCard";
 import { Search, Bookmark, Plus, List, User, ArrowRight } from "lucide-react";
 import React from "react";
+import { prisma } from "@/lib/prisma";
 
 type QuickCard = {
   icon: React.ComponentType<{ className?: string }>;
@@ -34,12 +34,12 @@ function mapListing(raw: any): Listing {
     type: raw.type,
     category: raw.category,
     status: raw.status,
-    location: raw.location?.area || raw.location?.city || "",
-    city: raw.location?.city || "",
-    state: raw.location?.state || "",
-    address: raw.location?.address,
+    location: raw.location?.city ?? "",
+    city: raw.location?.city ?? "",
+    state: raw.location?.state ?? "",
+    address: raw.location?.address ?? undefined,
     images: (raw.images ?? []).map((img: any) => img.url),
-    createdAt: raw.createdAt,
+    createdAt: raw.createdAt instanceof Date ? raw.createdAt.toISOString() : raw.createdAt,
   };
 }
 
@@ -58,12 +58,8 @@ export default async function DashboardPage() {
 
   const role = (session.user as any).role as string;
   const name = session.user.name ?? "User";
+  const userId = (session.user as any).id as string;
   const isSellerOrAgent = role === "SELLER" || role === "AGENT";
-
-  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const cookieStore = cookies();
-  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
-  const opts = { headers: { Cookie: cookieHeader }, cache: "no-store" as const };
 
   let pendingCount = 0;
   let publishedCount = 0;
@@ -72,21 +68,28 @@ export default async function DashboardPage() {
   let recentListings: Listing[] = [];
 
   try {
-    const fetches = await Promise.all([
-      isSellerOrAgent ? fetch(`${base}/api/user/listings?status=PENDING&limit=1`, opts) : null,
-      isSellerOrAgent ? fetch(`${base}/api/user/listings?status=PUBLISHED&limit=1`, opts) : null,
-      isSellerOrAgent ? fetch(`${base}/api/user/listings?status=REJECTED&limit=1`, opts) : null,
-      fetch(`${base}/api/user/saved-listings`, opts),
-      isSellerOrAgent ? fetch(`${base}/api/user/listings?limit=3`, opts) : null,
-    ]);
+    if (isSellerOrAgent) {
+      const [pending, published, rejected, recent] = await Promise.all([
+        prisma.listing.count({ where: { userId, status: "PENDING" } }),
+        prisma.listing.count({ where: { userId, status: "PUBLISHED" } }),
+        prisma.listing.count({ where: { userId, status: "REJECTED" } }),
+        prisma.listing.findMany({
+          where: { userId },
+          take: 3,
+          orderBy: { createdAt: "desc" },
+          include: {
+            images: { where: { isPrimary: true }, take: 1 },
+            location: true,
+          },
+        }),
+      ]);
+      pendingCount = pending;
+      publishedCount = published;
+      rejectedCount = rejected;
+      recentListings = recent.map(mapListing);
+    }
 
-    const [pendingRes, publishedRes, rejectedRes, savedRes, recentRes] = fetches;
-
-    if (pendingRes?.ok) pendingCount = (await pendingRes.json()).total ?? 0;
-    if (publishedRes?.ok) publishedCount = (await publishedRes.json()).total ?? 0;
-    if (rejectedRes?.ok) rejectedCount = (await rejectedRes.json()).total ?? 0;
-    if (savedRes?.ok) savedCount = (await savedRes.json()).savedListings?.length ?? 0;
-    if (recentRes?.ok) recentListings = ((await recentRes.json()).listings ?? []).map(mapListing);
+    savedCount = await prisma.savedListing.count({ where: { userId } });
   } catch {}
 
   const tipText =
