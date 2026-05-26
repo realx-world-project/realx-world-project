@@ -1,6 +1,4 @@
 /** @type {import('next').NextConfig} */
-const isDev = process.env.NODE_ENV === 'development';
-
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
@@ -58,13 +56,13 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              isDev
-                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
-                : "script-src 'self' 'unsafe-eval'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https://res.cloudinary.com https://*.cloudinary.com https://images.unsplash.com https://images.pexels.com",
-              "font-src 'self'",
-              "connect-src 'self' https://*.upstash.io",
+              "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://images.unsplash.com https://placehold.co https://images.pexels.com",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.upstash.io https://*.supabase.co wss://*.supabase.co",
+              "frame-src 'none'",
+              "object-src 'none'",
             ].join("; "),
           },
         ],
