@@ -38,6 +38,12 @@ const AUTH_LOGIN = "/login";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Skip rate limiting for NextAuth routes — OAuth flows make multiple rapid
+  // redirects that exceed the auth limiter threshold
+  if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
   // Skip static assets — no rate limiting needed
   if (
     pathname.startsWith("/_next/static") ||
@@ -55,22 +61,6 @@ export async function middleware(req: NextRequest) {
     !req.headers.get("CF-Connecting-IP")
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // Stricter rate limit for auth endpoints
-  if (pathname.startsWith("/api/auth")) {
-    try {
-      const { success } = await authLimiter.limit(ip);
-      if (!success) {
-        return NextResponse.json(
-          { error: "Too many requests", retryAfter: 60 },
-          { status: 429 }
-        );
-      }
-    } catch (e) {
-      console.error("Rate limit check failed:", e);
-    }
-    return NextResponse.next();
   }
 
   // Global rate limit for all other routes
