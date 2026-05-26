@@ -3,6 +3,7 @@ import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
 import { rateLimitByIP } from "@/lib/rateLimit";
+import { sendEmail, welcomeEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -51,6 +52,12 @@ export async function POST(request: NextRequest) {
         meta: {},
       },
     });
+
+    sendEmail({
+      to: user.email,
+      subject: "Welcome to RealX World — Your Account is Ready!",
+      html: welcomeEmail(parsed.data.name, parsed.data.role ?? "BUYER"),
+    }).catch(console.error);
 
     return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
   } catch (err) {
