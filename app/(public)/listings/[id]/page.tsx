@@ -9,6 +9,7 @@ import { ImageGallery } from "@/components/listings/ImageGallery";
 import { BookmarkToggle } from "@/components/listings/BookmarkToggle";
 import { ReportDialog } from "@/components/listings/ReportDialog";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import type { Listing } from "@/components/listings/ListingCard";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +17,6 @@ export const dynamic = "force-dynamic";
 interface ListingDetailPageProps {
   params: Promise<{ id: string }>;
 }
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-NG", {
@@ -31,7 +30,7 @@ const typeClasses = {
   RENT: "bg-green-600 text-white border-transparent",
 } as const;
 
-function mapApiListing(raw: any): Listing {
+function mapPrismaListing(raw: any): Listing {
   return {
     id: raw.id,
     title: raw.title,
@@ -44,23 +43,38 @@ function mapApiListing(raw: any): Listing {
     city: raw.location?.city ?? "",
     state: raw.location?.state ?? "",
     address: raw.location?.address,
-    images: (raw.images ?? [])
-      .sort((a: any, b: any) => a.order - b.order)
-      .map((img: any) => img.url),
-    createdAt: raw.createdAt,
-    seller: raw.user?.name ? { name: raw.user.name, role: "AGENT" } : undefined,
+    images: (raw.images ?? []).map((img: any) => img.url),
+    createdAt: raw.createdAt?.toISOString(),
+    phone: raw.user?.phone ?? undefined,
+    seller: raw.user?.name ? { name: raw.user.name, role: raw.user.role ?? "AGENT" } : undefined,
   };
 }
 
-async function fetchListing(id: string): Promise<Listing | null> {
+async function getListing(id: string): Promise<Listing | null> {
   try {
-    const res = await fetch(`${BASE_URL}/api/listings/${id}`, {
-      cache: "no-store",
+    const raw = await prisma.listing.findUnique({
+      where: { id },
+      include: {
+        images: {
+          orderBy: { order: "asc" },
+        },
+        location: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            createdAt: true,
+            phone: true,
+          },
+        },
+      },
     });
-    if (!res.ok) return null;
-    const raw = await res.json();
-    return mapApiListing(raw);
-  } catch {
+    if (!raw) return null;
+    return mapPrismaListing(raw);
+  } catch (err) {
+    console.error("getListing error:", err);
     return null;
   }
 }
@@ -69,7 +83,7 @@ export async function generateMetadata({
   params,
 }: ListingDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const listing = await fetchListing(id);
+  const listing = await getListing(id);
 
   if (!listing) {
     return { title: "Property Not Found | RealX World" };
@@ -106,7 +120,7 @@ export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
   const { id } = await params;
-  const [listing, session] = await Promise.all([fetchListing(id), auth()]);
+  const [listing, session] = await Promise.all([getListing(id), auth()]);
 
   if (!listing) return <NotFound />;
 
