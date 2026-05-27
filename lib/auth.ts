@@ -1,35 +1,48 @@
 import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
+  // Required on Vercel / behind any reverse proxy.
+  // Also add AUTH_TRUST_HOST=true in Vercel environment variables.
   trustHost: true,
 
-  // PKCE stores a code_verifier cookie during OAuth initiation.
-  // On Vercel, the callback can land on a different edge region than the
-  // initiation, so the cookie is gone — producing "pkceCodeVerifier could
-  // not be parsed". Dropping PKCE (keeping only state) avoids this entirely.
-  // The cookies config below ensures the state cookie also survives cross-
-  // region on a custom domain by setting sameSite: "none" + secure: true.
+  // OAuth callbacks are top-level browser navigations (not fetch/XHR), so
+  // sameSite must be "lax" — not "none". "none" is for cross-origin requests
+  // inside iframes/fetch and requires the Partitioned attribute in modern browsers.
+  // maxAge: 900 gives a 15-min window so the cookie survives cross-region routing.
   cookies: {
-    pkceCodeVerifier: {
-      name: "next-auth.pkce.code_verifier",
+    state: {
+      name: "__Secure-next-auth.state",
       options: {
         httpOnly: true,
-        sameSite: "none" as const,
+        sameSite: "lax" as const,
         path: "/",
         secure: true,
+        maxAge: 900,
       },
     },
-    state: {
-      name: "next-auth.state",
+    // Still configure pkceCodeVerifier even though checks: ["state"] disables
+    // PKCE — prevents NextAuth from falling back to a default insecure name.
+    pkceCodeVerifier: {
+      name: "__Secure-next-auth.pkce.code_verifier",
       options: {
         httpOnly: true,
-        sameSite: "none" as const,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: true,
+        maxAge: 900,
+      },
+    },
+    nonce: {
+      name: "__Secure-next-auth.nonce",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
         path: "/",
         secure: true,
       },
@@ -37,9 +50,12 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   },
 
   providers: [
-    GoogleProvider({
+    Google({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      // Disable PKCE — the pkce cookie set during signin can land on a
+      // different Vercel region from the callback, making it unreadable.
+      // State-only is sufficient CSRF protection for the OAuth flow.
       checks: ["state"],
       authorization: {
         params: {
@@ -121,6 +137,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
   pages: {
     signIn: "/login",
+    error: "/login",
   },
 
   secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
