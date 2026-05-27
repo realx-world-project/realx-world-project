@@ -38,9 +38,14 @@ const AUTH_LOGIN = "/login";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip rate limiting for NextAuth routes — OAuth flows make multiple rapid
-  // redirects that exceed the auth limiter threshold
-  if (pathname.startsWith("/api/auth/")) {
+  // Skip middleware entirely for NextAuth routes and public pages
+  if (
+    pathname.startsWith("/api/auth/") ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname.startsWith("/home") ||
+    pathname.startsWith("/listings")
+  ) {
     return NextResponse.next();
   }
 

@@ -75,7 +75,13 @@ export default function LoginPage() {
           <div className="mb-6">
             <button
               type="button"
-              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+              onClick={async () => {
+                try {
+                  await signIn("google", { callbackUrl: "/dashboard", redirect: true });
+                } catch (err) {
+                  console.error("Google sign in error:", err);
+                }
+              }}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-lg hover:border-[#D4AF37] hover:bg-gray-50 transition-all duration-200 text-gray-700 font-medium bg-white"
             >
               <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0">
