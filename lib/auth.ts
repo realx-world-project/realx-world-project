@@ -16,6 +16,15 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   // inside iframes/fetch and requires the Partitioned attribute in modern browsers.
   // maxAge: 900 gives a 15-min window so the cookie survives cross-region routing.
   cookies: {
+    sessionToken: {
+      name: "__Secure-next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: true,
+      },
+    },
     state: {
       name: "__Secure-next-auth.state",
       options: {

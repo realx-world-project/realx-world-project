@@ -83,10 +83,24 @@ export async function middleware(req: NextRequest) {
 
   // Route protection
   if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    // On HTTPS (production) NextAuth sets __Secure-next-auth.session-token.
+    // Explicitly naming it here avoids getToken guessing wrong based on the
+    // forwarded protocol header, which can differ behind Cloudflare/Vercel.
+    const isSecure = req.nextUrl.protocol === "https:";
+    const cookieName = isSecure
+      ? "__Secure-next-auth.session-token"
+      : "next-auth.session-token";
+
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+      cookieName,
+    });
 
     if (!token) {
-      return NextResponse.redirect(new URL(AUTH_LOGIN, req.url));
+      const loginUrl = new URL(AUTH_LOGIN, req.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
     }
 
     if (pathname.startsWith("/admin") && token.role !== "ADMIN") {
