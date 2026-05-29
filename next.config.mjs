@@ -70,7 +70,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://images.unsplash.com https://placehold.co https://images.pexels.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.upstash.io https://*.supabase.co wss://*.supabase.co",
+              "connect-src 'self' https://*.upstash.io https://*.supabase.co wss://*.supabase.co https://api.cloudinary.com https://res.cloudinary.com",
               "frame-src 'none'",
               "object-src 'none'",
             ].join("; "),
