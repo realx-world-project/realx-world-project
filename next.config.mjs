@@ -68,13 +68,11 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // unsafe-inline is required by Radix UI in development only;
-              // production builds use hashed styles and do not need it.
-              `script-src 'self' 'unsafe-eval'${isDev ? " 'unsafe-inline'" : ""}`,
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://images.unsplash.com https://placehold.co https://images.pexels.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.upstash.io https://*.supabase.co wss://*.supabase.co https://api.cloudinary.com https://res.cloudinary.com",
+              "connect-src 'self' wss: ws: https://*.upstash.io https://*.supabase.co wss://*.supabase.co https://api.cloudinary.com https://res.cloudinary.com",
               "frame-src 'none'",
               "object-src 'none'",
             ].join("; "),
