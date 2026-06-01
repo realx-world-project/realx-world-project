@@ -117,9 +117,10 @@ model SavedListing {
   listingId String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
-  listing   Listing  @relation(fields: [listingId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, listingId])
   @@map("saved_listings")
 }
 
