@@ -70,7 +70,7 @@ const nextConfig = {
               "default-src 'self'",
               // unsafe-inline is required by Radix UI in development only;
               // production builds use hashed styles and do not need it.
-              `script-src 'self' 'unsafe-eval'${isDev ? " 'unsafe-inline'" : ""}`,
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://images.unsplash.com https://placehold.co https://images.pexels.com",
               "font-src 'self' data:",

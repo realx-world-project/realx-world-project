@@ -70,7 +70,13 @@ export default function LoginPage() {
   return (
     <AuthCard title="Sign In" subtitle="Welcome back to RealX World">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            form.handleSubmit(onSubmit)(e);
+          }}
+          className="space-y-4"
+        >
           {/* Google Sign In */}
           <div className="mb-6">
             <button
