@@ -1,4 +1,4 @@
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -21,19 +21,15 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) {
-    const token = await getToken({
-      req,
-      secret: process.env.AUTH_SECRET,
-      cookieName: "__Secure-next-auth.session-token",
-    });
+    const session = await auth();
 
-    if (!token) {
+    if (!session) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    if (pathname.startsWith("/admin") && token.role !== "ADMIN") {
+    if (pathname.startsWith("/admin") && (session.user as any)?.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/login", req.url));
     }
   }
