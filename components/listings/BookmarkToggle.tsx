@@ -28,12 +28,16 @@ export function BookmarkToggle({
   const router = useRouter();
 
   const handleToggle = async () => {
+    if (isPending) return;
+
     const previous = isSaved;
-    setIsSaved(!isSaved);
+    setIsSaved(!isSaved); // optimistic update
+    setIsPending(true);
 
     try {
       const res = await fetch(`/api/listings/${listingId}/bookmark`, {
-        method: isSaved ? "DELETE" : "POST",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
 
       if (res.status === 401) {
@@ -44,9 +48,16 @@ export function BookmarkToggle({
 
       if (!res.ok) throw new Error();
 
+      // Use server response as source of truth — handles edge cases where
+      // DB state diverged from optimistic client state.
+      const data = await res.json();
+      setIsSaved(data.bookmarked);
+
       toast({
-        title: isSaved ? "Removed from saved" : "Listing saved",
-        description: isSaved ? "Removed from your saved listings" : "Added to your saved listings",
+        title: data.bookmarked ? "Listing saved" : "Removed from saved",
+        description: data.bookmarked
+          ? "Added to your saved listings"
+          : "Removed from your saved listings",
       });
     } catch {
       setIsSaved(previous);
@@ -55,6 +66,8 @@ export function BookmarkToggle({
         description: "Could not update saved listing. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsPending(false);
     }
   };
 

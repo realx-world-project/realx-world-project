@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const isDev = process.env.NODE_ENV === "development";
+
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
@@ -66,7 +68,9 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              // unsafe-inline is required by Radix UI in development only;
+              // production builds use hashed styles and do not need it.
+              `script-src 'self' 'unsafe-eval'${isDev ? " 'unsafe-inline'" : ""}`,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://images.unsplash.com https://placehold.co https://images.pexels.com",
               "font-src 'self' data:",

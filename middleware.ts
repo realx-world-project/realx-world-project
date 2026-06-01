@@ -43,6 +43,8 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/api/auth/") ||
     pathname === "/login" ||
     pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
     pathname.startsWith("/home") ||
     pathname.startsWith("/listings")
   ) {
@@ -83,18 +85,10 @@ export async function middleware(req: NextRequest) {
 
   // Route protection
   if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) {
-    // On HTTPS (production) NextAuth sets __Secure-next-auth.session-token.
-    // Explicitly naming it here avoids getToken guessing wrong based on the
-    // forwarded protocol header, which can differ behind Cloudflare/Vercel.
-    const isSecure = req.nextUrl.protocol === "https:";
-    const cookieName = isSecure
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token";
-
     const token = await getToken({
       req,
-      secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
-      cookieName,
+      secret: process.env.AUTH_SECRET,
+      cookieName: "__Secure-next-auth.session-token",
     });
 
     if (!token) {
