@@ -1,32 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/session";
+import { auth } from "@/lib/auth";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await requireRole(["ADMIN", "AGENT", "SELLER", "BUYER"]);
+  const session = await auth();
 
-  console.log("[bookmark] session result:", JSON.stringify(session instanceof NextResponse ? "NextResponse-returned" : session?.user));
-
-  if (session instanceof NextResponse) {
-    console.log("[bookmark] auth failed — returning early");
-    return session;
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user!.id as string;
+  const userId = session.user.id as string;
   const listingId = params.id;
-
-  console.log("[bookmark] userId:", userId, "listingId:", listingId);
 
   try {
     const listing = await prisma.listing.findUnique({
       where: { id: listingId },
       select: { id: true },
     });
-
-    console.log("[bookmark] listing found:", !!listing);
 
     if (!listing) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
@@ -35,8 +28,6 @@ export async function POST(
     const existing = await prisma.savedListing.findFirst({
       where: { userId, listingId },
     });
-
-    console.log("[bookmark] existing saved:", !!existing);
 
     if (existing) {
       await prisma.savedListing.delete({ where: { id: existing.id } });
