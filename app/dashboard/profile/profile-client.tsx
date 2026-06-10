@@ -60,6 +60,18 @@ export interface ProfileClientProps {
 function MyInfoTab({ initialName, initialPhone, email, role, createdAt, isVerified }: ProfileClientProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [resendPending, setResendPending] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
+
+  const handleResendVerification = async () => {
+    setResendPending(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", { method: "POST" });
+      if (res.ok) setResendSent(true);
+    } finally {
+      setResendPending(false);
+    }
+  };
 
   const initials = initialName
     .split(" ")
@@ -164,9 +176,22 @@ function MyInfoTab({ initialName, initialPhone, email, role, createdAt, isVerifi
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
             <span className="text-sm font-medium">Verified</span>
-            <Badge variant={isVerified ? "default" : "secondary"}>
-              {isVerified ? "Verified" : "Unverified"}
-            </Badge>
+            <div className="flex flex-col items-end gap-2">
+              <Badge variant={isVerified ? "default" : "secondary"}>
+                {isVerified ? "Verified" : "Unverified"}
+              </Badge>
+              {!isVerified && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendVerification}
+                  disabled={resendPending || resendSent}
+                  className="mt-2 text-xs border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black"
+                >
+                  {resendSent ? "Email Sent!" : resendPending ? "Sending..." : "Resend Verification Email"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

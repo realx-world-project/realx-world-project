@@ -46,8 +46,10 @@ model User {
   name         String?
   phone        String?
   role         UserRole    @default(BUYER)
-  isVerified   Boolean     @default(false)
-  isActive     Boolean     @default(true)
+  isVerified         Boolean     @default(false)
+  emailVerifyToken   String?     @unique
+  emailVerifyExpiry  DateTime?
+  isActive           Boolean     @default(true)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

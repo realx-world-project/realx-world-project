@@ -19,6 +19,38 @@ export async function sendEmail({
   });
 }
 
+export function verificationEmail(verifyUrl: string): string {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#F9F8F4;padding:40px 24px;">
+      <div style="background:#0A0A0A;padding:24px;text-align:center;border-radius:8px 8px 0 0;">
+        <h1 style="color:#D4AF37;margin:0;font-size:24px;">RealX World</h1>
+      </div>
+      <div style="background:#ffffff;padding:32px 24px;border-radius:0 0 8px 8px;border:1px solid #e5e7eb;">
+        <h2 style="color:#0A0A0A;margin-bottom:16px;">Verify Your Email Address</h2>
+        <p style="color:#374151;line-height:1.6;">
+          Thank you for registering on RealX World. Please click the button
+          below to verify your email address. This link expires in 24 hours.
+        </p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="${verifyUrl}"
+             style="background:#D4AF37;color:#0A0A0A;padding:14px 32px;
+                    border-radius:6px;font-weight:700;text-decoration:none;
+                    font-size:16px;display:inline-block;">
+            Verify Email Address
+          </a>
+        </div>
+        <p style="color:#6b7280;font-size:13px;">
+          If you did not create an account on RealX World,
+          you can safely ignore this email.
+        </p>
+        <p style="color:#6b7280;font-size:13px;">
+          Or copy this link: ${verifyUrl}
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 export function welcomeEmail(name: string, role: string): string {
   const roleDisplay = {
     BUYER: "Property Buyer",

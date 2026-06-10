@@ -50,6 +50,25 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     strategy: "jwt" as const,
   },
   callbacks: {
+    signIn: async ({ user, account }: { user: any; account?: any }) => {
+      if (account?.provider === "google" && user?.email) {
+        try {
+          await prisma.user.upsert({
+            where: { email: user.email },
+            update: { isVerified: true },
+            create: {
+              email: user.email,
+              name: user.name ?? "",
+              isVerified: true,
+              role: "BUYER",
+            },
+          });
+        } catch (err) {
+          console.error("[signIn google] error:", err);
+        }
+      }
+      return true;
+    },
     jwt: async ({ token, user }: { token: JWT; user?: any }) => {
       if (user) {
         token.id = user.id;

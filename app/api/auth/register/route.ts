@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
 import { rateLimitByIP } from "@/lib/rateLimit";
-import { sendEmail, welcomeEmail } from "@/lib/email";
+import { sendEmail, welcomeEmail, verificationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -52,6 +53,22 @@ export async function POST(request: NextRequest) {
         meta: {},
       },
     });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerifyToken: token, emailVerifyExpiry: expiry },
+    });
+
+    const verifyUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
+
+    sendEmail({
+      to: user.email,
+      subject: "Verify your RealX World email address",
+      html: verificationEmail(verifyUrl),
+    }).catch(console.error);
 
     sendEmail({
       to: user.email,

@@ -171,8 +171,27 @@ export function UserActionsCell({ user }: { user: AdminUser }) {
   const router = useRouter();
   const [roleOpen, setRoleOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const { toast } = useToast();
 
   const refresh = () => router.refresh();
+
+  const toggleVerified = async () => {
+    setVerifyLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/verify`, { method: "PATCH" });
+      if (!res.ok) throw new Error();
+      toast({
+        title: user.isVerified ? "User unverified" : "User verified",
+        description: `${user.name} has been ${user.isVerified ? "unverified" : "verified"}.`,
+      });
+      refresh();
+    } catch {
+      toast({ title: "Error", description: "Could not update verification.", variant: "destructive" });
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
 
   return (
     <>
@@ -184,6 +203,9 @@ export function UserActionsCell({ user }: { user: AdminUser }) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setRoleOpen(true)}>Change Role</DropdownMenuItem>
+          <DropdownMenuItem onClick={toggleVerified} disabled={verifyLoading}>
+            {user.isVerified ? "Unverify" : "Mark Verified"}
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setSuspendOpen(true)}
             className={user.isActive ? "text-destructive" : ""}
