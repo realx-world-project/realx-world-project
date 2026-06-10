@@ -1,6 +1,15 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { UserCheck, TrendingUp, Heart, CheckCircle2 } from "lucide-react";
+import {
+  BarChart2,
+  FolderOpen,
+  Headphones,
+  GraduationCap,
+  Home,
+  Globe,
+  CheckCircle2,
+  ArrowRight,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
@@ -9,21 +18,42 @@ export const metadata: Metadata = {
     "Discover how RealX World delivers exceptional real estate service through trained professionals committed to exceeding client expectations.",
 };
 
-const pillars = [
+const services = [
   {
-    icon: UserCheck,
-    title: "Trained Professionals",
-    body: "Our registered brokers are rigorously trained and self-motivated professionals who put the customer experience above all else, continuously raising the standard of real estate service.",
+    icon: BarChart2,
+    title: "Consultancy",
+    desc: "Data-driven real estate advice and professional guidance across land acquisition, development, and investment.",
+    href: "/service/consultancy",
   },
   {
-    icon: TrendingUp,
-    title: "Exceeding Expectations",
-    body: "We do not settle for meeting expectations — we exceed them. Every client interaction is an opportunity to demonstrate our unwavering commitment to quality service.",
+    icon: FolderOpen,
+    title: "Property & Project Management",
+    desc: "Full-cycle project management from initiation to post-implementation, handled by experienced professionals.",
+    href: "/service/property-management",
   },
   {
-    icon: Heart,
-    title: "Customer First",
-    body: "At Real-X, we know that without the customer we do not exist. Making your life easier and more rewarding is not just our goal — it is our reason for being.",
+    icon: Headphones,
+    title: "Support Services",
+    desc: "24/7 after-sales support to help clients navigate investment, divestment, and reinvestment opportunities.",
+    href: "/service/support-services",
+  },
+  {
+    icon: GraduationCap,
+    title: "Corporate Training",
+    desc: "Tailored training programmes for client staff on Real-X World products, services, and software.",
+    href: "/service/corporate-training",
+  },
+  {
+    icon: Home,
+    title: "Rentals",
+    desc: "Guided property search, rent management, and automated payment reminders — all from the comfort of your home.",
+    href: "/service/rentals",
+  },
+  {
+    icon: Globe,
+    title: "Open Market",
+    desc: "A near-perfect open market for genuine real estate transactions with limitless opportunities across the globe.",
+    href: "/service/open-market",
   },
 ];
 
@@ -52,36 +82,37 @@ export default function ServicePage() {
             customer experience is the most important factor of business, and
             who continuously raise the standard by which service is defined. At
             Real-X, we know that without the customer we do not exist, and
-            therefore we are resolute in our commitment to making the customer's
-            life easier and more rewarding — that is our reason for being.
+            therefore we are resolute in our commitment to making the
+            customer&apos;s life easier and more rewarding — that is our reason
+            for being.
           </p>
         </div>
       </section>
 
-      {/* Service Pillars */}
+      {/* Service Cards */}
       <section className="bg-gray-50 py-12 sm:py-16">
         <div className="container mx-auto px-4">
           <div className="mb-10 text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl">
-              What Sets Us Apart
-            </h2>
+            <h2 className="text-2xl font-bold sm:text-3xl">What We Offer</h2>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {pillars.map((pillar) => {
-              const Icon = pillar.icon;
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {services.map((svc) => {
+              const Icon = svc.icon;
               return (
-                <Card
-                  key={pillar.title}
-                  className="border-t-2 border-[#D4AF37] shadow-sm"
-                >
-                  <CardContent className="pt-6 pb-6">
-                    <Icon className="mb-4 h-8 w-8 text-[#D4AF37]" />
-                    <h3 className="mb-2 text-lg font-semibold">
-                      {pillar.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{pillar.body}</p>
-                  </CardContent>
-                </Card>
+                <Link key={svc.href} href={svc.href} className="group block">
+                  <Card className="h-full border-t-2 border-[#D4AF37] shadow-sm transition-shadow group-hover:shadow-md">
+                    <CardContent className="flex h-full flex-col pt-6 pb-6">
+                      <Icon className="mb-4 h-8 w-8 text-[#D4AF37]" />
+                      <h3 className="mb-2 text-lg font-semibold">{svc.title}</h3>
+                      <p className="flex-1 text-sm text-muted-foreground">
+                        {svc.desc}
+                      </p>
+                      <div className="mt-4 flex items-center gap-1 text-sm font-medium text-[#D4AF37]">
+                        Learn more <ArrowRight className="h-4 w-4" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               );
             })}
           </div>
@@ -95,8 +126,8 @@ export default function ServicePage() {
             Our Commitment to You
           </h2>
           <p className="mx-auto max-w-3xl text-gray-300">
-            We are resolute in our commitment to making the customer's life
-            easier and more rewarding. Our brokers are held to the highest
+            We are resolute in our commitment to making the customer&apos;s
+            life easier and more rewarding. Our brokers are held to the highest
             professional standards so that every transaction you make on RealX
             World is backed by expertise, trust, and genuine care.
           </p>
