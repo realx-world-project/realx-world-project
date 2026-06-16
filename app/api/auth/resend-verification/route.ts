@@ -28,7 +28,7 @@ export async function POST() {
     data: { emailVerifyToken: token, emailVerifyExpiry: expiry },
   });
 
-  const verifyUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
+  const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${token}`;
 
   sendEmail({
     to: user.email,
