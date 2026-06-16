@@ -1,6 +1,9 @@
 import { auth } from "@/lib/auth";
+export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 import ProfileClient from "./profile-client";
 
 export default async function ProfilePage() {
