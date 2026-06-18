@@ -1,17 +1,14 @@
 import { auth } from "@/lib/auth";
-export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import ProfileClient from "./profile-client";
 
 export const dynamic = "force-dynamic";
-import ProfileClient from "./profile-client";
 
 export default async function ProfilePage() {
   const session = await auth();
   if (!session) redirect("/login");
-
   const userId = session.user.id as string;
-
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -23,7 +20,6 @@ export default async function ProfilePage() {
       isVerified: true,
     },
   });
-
   return (
     <ProfileClient
       initialName={user?.name ?? session.user.name ?? ""}
