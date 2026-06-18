@@ -4,7 +4,7 @@ export const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z
     .string()
-    .regex(/^0[789][01]\d{8}$/, "Enter a valid Nigerian phone number"),
+    .regex(/^0[789]\d{9}$/, "Enter a valid Nigerian phone number"),
 });
 
 export const passwordSchema = z
