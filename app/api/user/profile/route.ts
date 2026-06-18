@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/session";
+import { auth } from "@/lib/auth";
 
 const updateProfileSchema = z.object({
   name: z.string().min(2),
@@ -9,14 +9,14 @@ const updateProfileSchema = z.object({
 });
 
 export async function GET(_request: NextRequest) {
-  const session = await requireRole(["ADMIN", "AGENT", "SELLER", "BUYER"]);
+  const session = await auth();
 
-  if (session instanceof NextResponse) {
-    return session;
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: session.user!.id as string },
+    where: { id: session.user.id as string },
     select: {
       name: true,
       phone: true,
@@ -42,10 +42,10 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const session = await requireRole(["ADMIN", "AGENT", "SELLER", "BUYER"]);
+  const session = await auth();
 
-  if (session instanceof NextResponse) {
-    return session;
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
@@ -56,7 +56,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const user = await prisma.user.update({
-    where: { id: session.user!.id },
+    where: { id: session.user.id as string },
     data: {
       name: parsed.data.name,
       phone: parsed.data.phone,
@@ -65,10 +65,10 @@ export async function PATCH(request: NextRequest) {
 
   await prisma.auditLog.create({
     data: {
-      userId: session.user!.id as string,
+      userId: session.user.id as string,
       action: "PROFILE_UPDATED",
       entity: "User",
-      entityId: session.user!.id as string,
+      entityId: session.user.id as string,
       meta: {},
     },
   });
