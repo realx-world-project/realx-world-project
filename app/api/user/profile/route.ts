@@ -55,6 +55,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   }
 
+  console.log("[profile PATCH] session.user.id:", session.user.id, "type:", typeof session.user.id);
   const user = await prisma.user.update({
     where: { id: session.user.id as string },
     data: {
