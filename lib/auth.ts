@@ -70,16 +70,20 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       return true;
     },
     jwt: async ({ token, user }: { token: JWT; user?: any }) => {
-      console.log("[jwt callback] incoming user:", JSON.stringify(user), "existing token.id:", token.id);
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-      console.log("[jwt callback] outgoing token.id:", token.id, "token.role:", token.role);
+      if (user?.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+          }
+        } catch (err) {
+          console.error("[jwt callback] error fetching db user:", err);
+        }
       }
       return token;
     },
     session: async ({ session, token }: { session: Session; token: JWT }) => {
-      console.log("[session callback] token.id:", token.id, "token.role:", token.role);
       if (session.user) {
         session.user.id = token.id as string;
         (session.user as any).role = token.role as string;
