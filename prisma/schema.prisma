@@ -58,6 +58,7 @@ model User {
   reports      Report[]
   auditLogs    AuditLog[]
   exports      Export[]
+  professional Professional?
 
   @@map("users")
 }
@@ -175,6 +176,58 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@map("password_reset_tokens")
+}
+
+enum ProfessionalCategory {
+  SURVEYOR
+  ARCHITECT
+  ENGINEER
+  CONTRACTOR
+  LAWYER
+  VALUER
+  PLANNER
+  LANDSCAPER
+  PROJECT_MANAGER
+  PROPERTY_MANAGER
+  OTHER
+}
+
+enum ProfessionalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model Professional {
+  id           String               @id @default(cuid())
+  userId       String               @unique
+  category     ProfessionalCategory
+  bio          String
+  company      String?
+  experience   Int
+  location     String
+  state        String
+  phone        String
+  website      String?
+  status       ProfessionalStatus   @default(PENDING)
+  isVerified   Boolean              @default(false)
+  credentials  ProfessionalCredential[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("professionals")
+}
+
+model ProfessionalCredential {
+  id             String       @id @default(cuid())
+  professionalId String
+  name           String
+  fileUrl        String
+  publicId       String
+  createdAt      DateTime     @default(now())
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  @@map("professional_credentials")
 }
 
 datasource db {
