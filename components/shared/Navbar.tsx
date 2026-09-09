@@ -20,10 +20,15 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/listings", label: "Listings" },
   { href: "/professionals", label: "Professionals" },
   { href: "/about", label: "About" },
   { href: "/service", label: "Service" },
+];
+
+const listingsSubLinks = [
+  { href: "/listings", label: "All Properties" },
+  { href: "/listings?type=SALE", label: "For Sale" },
+  { href: "/listings?type=RENT", label: "Rentals" },
 ];
 
 const getRoleVariant = (role: string) => {
@@ -69,23 +74,59 @@ export function Navbar() {
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
+            <Link
+              href="/"
+              className={cn(
+                "text-sm font-medium transition-colors pb-0.5",
+                pathname === "/"
+                  ? "text-[#D4AF37] font-semibold border-b-2 border-[#D4AF37]"
+                  : "text-gray-600 hover:text-[#D4AF37]"
+              )}
+            >
+              Home
+            </Link>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
                   className={cn(
-                    "text-sm font-medium transition-colors pb-0.5",
-                    isActive
+                    "text-sm font-medium transition-colors pb-0.5 focus:outline-none",
+                    pathname === "/listings"
                       ? "text-[#D4AF37] font-semibold border-b-2 border-[#D4AF37]"
                       : "text-gray-600 hover:text-[#D4AF37]"
                   )}
                 >
-                  {link.label}
-                </Link>
-              );
-            })}
+                  Listings
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {listingsSubLinks.map((sub) => (
+                  <DropdownMenuItem key={sub.href} asChild>
+                    <Link href={sub.href}>{sub.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {navLinks
+              .filter((link) => link.href !== "/")
+              .map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={cn(
+                      "text-sm font-medium transition-colors pb-0.5",
+                      isActive
+                        ? "text-[#D4AF37] font-semibold border-b-2 border-[#D4AF37]"
+                        : "text-gray-600 hover:text-[#D4AF37]"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
           </div>
 
           {/* Desktop Auth */}
@@ -149,23 +190,61 @@ export function Navbar() {
               <SheetContent side="right" className="bg-white w-72">
                 <div className="flex flex-col h-full">
                   <nav className="flex flex-col space-y-1 mt-8 flex-1">
-                    {navLinks.map((link) => {
-                      const isActive = pathname === link.href;
-                      return (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          className={cn(
-                            "px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-                            isActive
-                              ? "text-[#D4AF37] bg-[#D4AF37]/10 font-semibold"
-                              : "text-gray-700 hover:text-[#D4AF37] hover:bg-gray-50"
-                          )}
-                        >
-                          {link.label}
-                        </Link>
-                      );
-                    })}
+                    <Link
+                      href="/"
+                      className={cn(
+                        "px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                        pathname === "/"
+                          ? "text-[#D4AF37] bg-[#D4AF37]/10 font-semibold"
+                          : "text-gray-700 hover:text-[#D4AF37] hover:bg-gray-50"
+                      )}
+                    >
+                      Home
+                    </Link>
+
+                    <Link
+                      href="/listings"
+                      className={cn(
+                        "px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                        pathname === "/listings"
+                          ? "text-[#D4AF37] bg-[#D4AF37]/10 font-semibold"
+                          : "text-gray-700 hover:text-[#D4AF37] hover:bg-gray-50"
+                      )}
+                    >
+                      Listings
+                    </Link>
+                    <Link
+                      href="/listings?type=SALE"
+                      className="px-4 py-2 ml-4 rounded-lg text-sm text-gray-600 hover:text-[#D4AF37] hover:bg-gray-50 transition-colors"
+                    >
+                      For Sale
+                    </Link>
+                    <Link
+                      href="/listings?type=RENT"
+                      className="px-4 py-2 ml-4 rounded-lg text-sm text-gray-600 hover:text-[#D4AF37] hover:bg-gray-50 transition-colors"
+                    >
+                      Rentals
+                    </Link>
+
+                    {navLinks
+                      .filter((link) => link.href !== "/")
+                      .map((link) => {
+                        const isActive = pathname === link.href;
+                        return (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            className={cn(
+                              "px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                              isActive
+                                ? "text-[#D4AF37] bg-[#D4AF37]/10 font-semibold"
+                                : "text-gray-700 hover:text-[#D4AF37] hover:bg-gray-50"
+                            )}
+                          >
+                            {link.label}
+                          </Link>
+                        );
+                      })}
                   </nav>
 
                   <div className="border-t border-gray-100 pt-4 pb-6 space-y-1">

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
+import Link from "next/link";
 import { ListingCard, type Listing } from "@/components/listings/ListingCard";
 import { SearchBar } from "@/components/listings/SearchBar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/pagination";
 import { House } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { cn } from "@/lib/utils";
 
 
 export const dynamic = "force-dynamic";
@@ -113,11 +115,61 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
   const params = await searchParams;
   const { listings, total, totalPages, page } = await getListings(params);
 
+  const currentType = params.type ?? "all";
+
+  const tabs = [
+    { label: "All Properties", value: "all" },
+    { label: "For Sale", value: "SALE" },
+    { label: "Rentals", value: "RENT" },
+  ];
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold sm:text-3xl">Browse Properties</h1>
-        <p className="mt-2 text-muted-foreground">Find your dream property in Nigeria</p>
+        <h1 className="text-2xl font-bold sm:text-3xl">
+          {currentType === "SALE"
+            ? "Properties for Sale"
+            : currentType === "RENT"
+            ? "Rentals"
+            : "Browse Properties"}
+        </h1>
+        <p className="mt-2 text-muted-foreground">
+          {currentType === "SALE"
+            ? "Find properties available for purchase across Nigeria"
+            : currentType === "RENT"
+            ? "Find rental properties available across Nigeria"
+            : "Find your dream property in Nigeria"}
+        </p>
+      </div>
+
+      <div className="mb-6 flex gap-1 border-b border-gray-200">
+        {tabs.map((tab) => {
+          const isActive = currentType === tab.value;
+          const newParams = new URLSearchParams();
+          if (params.q) newParams.set("q", params.q);
+          if (params.category && params.category !== "all")
+            newParams.set("category", params.category);
+          if (params.state && params.state !== "all")
+            newParams.set("state", params.state);
+          if (params.priceMin) newParams.set("priceMin", params.priceMin);
+          if (params.priceMax) newParams.set("priceMax", params.priceMax);
+          if (tab.value !== "all") newParams.set("type", tab.value);
+          const href = `/listings?${newParams.toString()}`;
+          return (
+            <Link
+              key={tab.value}
+              href={href}
+              className={cn(
+                "px-6 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px",
+                isActive
+                  ? "border-[#D4AF37] text-[#D4AF37]"
+                  : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+              )}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
       </div>
 
       <div className="mb-8">
@@ -157,14 +209,22 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  href={page > 1 ? `/listings?page=${page - 1}` : "#"}
+                  href={
+                    page > 1
+                      ? `/listings?page=${page - 1}${
+                          currentType !== "all" ? `&type=${currentType}` : ""
+                        }`
+                      : "#"
+                  }
                   aria-disabled={page <= 1}
                 />
               </PaginationItem>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <PaginationItem key={pageNum}>
                   <PaginationLink
-                    href={`/listings?page=${pageNum}`}
+                    href={`/listings?page=${pageNum}${
+                      currentType !== "all" ? `&type=${currentType}` : ""
+                    }`}
                     isActive={pageNum === page}
                   >
                     {pageNum}
@@ -173,7 +233,13 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
               ))}
               <PaginationItem>
                 <PaginationNext
-                  href={page < totalPages ? `/listings?page=${page + 1}` : "#"}
+                  href={
+                    page < totalPages
+                      ? `/listings?page=${page + 1}${
+                          currentType !== "all" ? `&type=${currentType}` : ""
+                        }`
+                      : "#"
+                  }
                   aria-disabled={page >= totalPages}
                 />
               </PaginationItem>
