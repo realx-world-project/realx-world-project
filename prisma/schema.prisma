@@ -59,6 +59,8 @@ model User {
   exports      Export[]
   professional Professional?
   materialVendor MaterialVendor?
+  kycVerification KycVerification?
+  kycStatus       KycStatus @default(NOT_SUBMITTED)
 
   @@map("users")
 }
@@ -176,6 +178,38 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@map("password_reset_tokens")
+}
+
+enum KycStatus {
+  NOT_SUBMITTED
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+enum KycIdType {
+  NIN
+  BVN
+  DRIVERS_LICENSE
+  PASSPORT
+}
+
+model KycVerification {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  idType          KycIdType
+  idNumber        String
+  firstName       String
+  lastName        String
+  dateOfBirth     String
+  status          KycStatus @default(PENDING)
+  youverifyRef    String?
+  failureReason   String?
+  verifiedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("kyc_verifications")
 }
 
 enum ProfessionalCategory {

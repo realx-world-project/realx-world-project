@@ -9,7 +9,8 @@ export default async function ProfilePage() {
   const session = await auth();
   if (!session) redirect("/login");
   const userId = session.user.id as string;
-  const user = await prisma.user.findUnique({
+  const db: any = prisma;
+  const user = await db.user.findUnique({
     where: { id: userId },
     select: {
       name: true,
@@ -18,6 +19,7 @@ export default async function ProfilePage() {
       role: true,
       createdAt: true,
       isVerified: true,
+      kycStatus: true,
     },
   });
   return (
@@ -28,6 +30,7 @@ export default async function ProfilePage() {
       role={user?.role ?? (session.user as any).role ?? ""}
       createdAt={user?.createdAt?.toISOString() ?? ""}
       isVerified={user?.isVerified ?? false}
+      kycStatus={user?.kycStatus ?? "NOT_SUBMITTED"}
     />
   );
 }

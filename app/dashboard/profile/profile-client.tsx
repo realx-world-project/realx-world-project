@@ -53,11 +53,19 @@ export interface ProfileClientProps {
   role: string;
   createdAt: string;
   isVerified: boolean;
+  kycStatus: string;
 }
+
+const kycStatusConfig: Record<string, { label: string; variant: "secondary" | "warning" | "success" | "destructive" }> = {
+  NOT_SUBMITTED: { label: "Not Verified", variant: "secondary" },
+  PENDING: { label: "Pending", variant: "warning" },
+  VERIFIED: { label: "ID Verified", variant: "success" },
+  FAILED: { label: "Verification Failed", variant: "destructive" },
+};
 
 // ── My Info Tab ────────────────────────────────────────────────────────────
 
-function MyInfoTab({ initialName, initialPhone, email, role, createdAt, isVerified }: ProfileClientProps) {
+function MyInfoTab({ initialName, initialPhone, email, role, createdAt, isVerified, kycStatus }: ProfileClientProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [resendPending, setResendPending] = useState(false);
@@ -193,6 +201,14 @@ function MyInfoTab({ initialName, initialPhone, email, role, createdAt, isVerifi
               )}
             </div>
           </div>
+          {role === "SELLER" && (
+            <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
+              <span className="text-sm font-medium">Identity Verification</span>
+              <Badge variant={kycStatusConfig[kycStatus]?.variant ?? "secondary"}>
+                {kycStatusConfig[kycStatus]?.label ?? "Not Verified"}
+              </Badge>
+            </div>
+          )}
         </div>
       </div>
     </div>

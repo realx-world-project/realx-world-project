@@ -21,6 +21,7 @@ const baseLinks = [
 const roleLinks = [
   { href: "/dashboard/listings", label: "My Listings" },
   { href: "/dashboard/listings/new", label: "Add Listing" },
+  { href: "/dashboard/kyc", label: "Identity Verification" },
 ];
 
 export function MobileDashboardNav() {

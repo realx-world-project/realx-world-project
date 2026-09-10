@@ -11,6 +11,7 @@ const links = [
   { href: "/admin/professionals", label: "Professionals" },
   { href: "/admin/materials", label: "Materials" },
   { href: "/admin/vendors", label: "Vendors" },
+  { href: "/admin/kyc", label: "KYC" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/reports", label: "Reports" },
   { href: "/admin/audit", label: "Audit Log" },

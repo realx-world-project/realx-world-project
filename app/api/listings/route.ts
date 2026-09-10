@@ -23,6 +23,25 @@ export async function POST(request: NextRequest) {
     return session;
   }
 
+  if ((session.user as any).role === "SELLER") {
+    const db: any = prisma;
+    const dbUser = await db.user.findUnique({
+      where: { id: session.user!.id as string },
+      select: { kycStatus: true },
+    });
+
+    if (dbUser?.kycStatus !== "VERIFIED") {
+      return NextResponse.json(
+        {
+          error: "Identity verification required",
+          code: "KYC_REQUIRED",
+          message: "Please verify your identity before listing a property.",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   const body = await request.json();
   const parsed = listingSchema.safeParse(body);
 
