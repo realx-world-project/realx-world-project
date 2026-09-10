@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
-import { requireRole } from "@/lib/session";
+import { auth } from "@/lib/auth";
 import { rateLimitByIP } from "@/lib/rateLimit";
 
 cloudinary.config({
@@ -10,13 +10,12 @@ cloudinary.config({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await requireRole(["SELLER", "AGENT", "ADMIN"]);
-
-  if (session instanceof NextResponse) {
-    return session;
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user!.id as string;
+  const userId = session.user.id as string;
   const rateLimit = await rateLimitByIP(`upload:${userId}`, 20, "1 h");
 
   if (!rateLimit.success) {
