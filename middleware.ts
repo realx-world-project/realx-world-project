@@ -29,6 +29,10 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
+    if ((session.user as any)?.needsOnboarding === true) {
+      return NextResponse.redirect(new URL("/onboarding/role", req.url));
+    }
+
     if (pathname.startsWith("/admin") && (session.user as any)?.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/login", req.url));
     }

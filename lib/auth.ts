@@ -69,13 +69,38 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    jwt: async ({ token, user }: { token: JWT; user?: any }) => {
+    jwt: async ({
+      token,
+      user,
+      account,
+      trigger,
+      session,
+    }: {
+      token: JWT;
+      user?: any;
+      account?: any;
+      trigger?: string;
+      session?: any;
+    }) => {
+      // Triggered by useSession().update() — e.g. after onboarding saves a role.
+      if (trigger === "update") {
+        if (session?.role) token.role = session.role;
+        (token as any).needsOnboarding = false;
+        return token;
+      }
+
       if (user?.email) {
         try {
           const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
           if (dbUser) {
             token.id = dbUser.id;
             token.role = dbUser.role;
+
+            if (account?.provider === "google") {
+              const isNew =
+                Math.abs(dbUser.createdAt.getTime() - dbUser.updatedAt.getTime()) < 5000;
+              (token as any).needsOnboarding = isNew;
+            }
           }
         } catch (err) {
           console.error("[jwt callback] error fetching db user:", err);
@@ -87,6 +112,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         (session.user as any).role = token.role as string;
+        (session.user as any).needsOnboarding = (token as any).needsOnboarding ?? false;
       }
       return session;
     },
