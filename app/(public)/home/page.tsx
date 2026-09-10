@@ -25,7 +25,7 @@ async function getRecentListings(): Promise<Listing[]> {
         location: true,
       },
     });
-    return rows.map((l) => ({
+    return rows.map((l: any) => ({
       id: l.id,
       title: l.title,
       price: l.price,
@@ -36,7 +36,7 @@ async function getRecentListings(): Promise<Listing[]> {
       city: l.location?.city ?? "",
       state: l.location?.state ?? "",
       address: l.location?.address ?? undefined,
-      images: l.images.map((img) => img.url),
+      images: l.images.map((img: any) => img.url),
       createdAt: l.createdAt.toISOString(),
     }));
   } catch (err) {

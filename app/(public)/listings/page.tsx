@@ -87,7 +87,7 @@ async function getListings(params: SearchParams): Promise<{
     const totalPages = Math.ceil(total / limit);
 
     return {
-      listings: rows.map((l) => ({
+      listings: rows.map((l: any) => ({
         id: l.id,
         title: l.title,
         price: l.price,
@@ -98,7 +98,7 @@ async function getListings(params: SearchParams): Promise<{
         city: l.location?.city ?? "",
         state: l.location?.state ?? "",
         address: l.location?.address ?? undefined,
-        images: l.images.map((img) => img.url),
+        images: l.images.map((img: any) => img.url),
         createdAt: l.createdAt.toISOString(),
       })),
       total,

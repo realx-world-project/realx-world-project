@@ -38,7 +38,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Report not found" }, { status: 404 });
   }
 
-  const report = await prisma.$transaction(async (tx) => {
+  const report = await prisma.$transaction(async (tx: any) => {
     const updated = await tx.report.update({
       where: { id: reportId },
       data: { status: "REVIEWED" },

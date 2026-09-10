@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   try {
     await prisma.$connect();
 
-    const listing = await prisma.$transaction(async (tx) => {
+    const listing = await prisma.$transaction(async (tx: any) => {
       const loc = await tx.location.create({
         data: {
           state: location.state,

@@ -39,7 +39,7 @@ export async function PATCH(
     const status = action === "APPROVE" ? "APPROVED" : "REJECTED";
     const auditAction = action === "APPROVE" ? "LISTING_APPROVED" : "LISTING_REJECTED";
 
-    const listing = await prisma.$transaction(async (tx) => {
+    const listing = await prisma.$transaction(async (tx: any) => {
       const updated = await tx.listing.update({
         where: { id: listingId },
         data: { status },

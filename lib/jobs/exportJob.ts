@@ -80,7 +80,7 @@ export async function generateExport(
           "id", "title", "description", "price", "type", "category",
           "status", "state", "city", "area", "address", "publishedAt", "createdAt",
         ]);
-        const rows = listings.map((l) =>
+        const rows = listings.map((l: any) =>
           rowToCsv([
             l.id, l.title, l.description, l.price, l.type, l.category,
             l.status, l.location.state, l.location.city, l.location.area,
@@ -145,7 +145,7 @@ export async function generateExport(
       });
 
       const header = rowToCsv(["id", "name", "email", "phone", "role", "isVerified", "isActive", "createdAt"]);
-      const rows = users.map((u) =>
+      const rows = users.map((u: any) =>
         rowToCsv([u.id, u.name, u.email, u.phone, u.role, u.isVerified, u.isActive, u.createdAt])
       );
       const csv = [header, ...rows].join("\n");

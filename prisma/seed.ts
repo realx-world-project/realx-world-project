@@ -307,8 +307,8 @@ async function clearSeedData() {
   }
 
   for (const user of seedUsers) {
-    const listingIds = user.listings.map((l) => l.id);
-    const locationIds = user.listings.map((l) => l.locationId);
+    const listingIds = user.listings.map((l: any) => l.id);
+    const locationIds = user.listings.map((l: any) => l.locationId);
 
     if (listingIds.length > 0) {
       await prisma.auditLog.deleteMany({ where: { entity: "Listing", entityId: { in: listingIds } } });

@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
 
     const stats = {
       totalUsers,
-      usersByRole: usersByRole.map((r) => ({ role: r.role, count: r._count.role })),
-      listingsByStatus: listingsByStatus.map((l) => ({ status: l.status, count: l._count.status })),
+      usersByRole: usersByRole.map((r: any) => ({ role: r.role, count: r._count.role })),
+      listingsByStatus: listingsByStatus.map((l: any) => ({ status: l.status, count: l._count.status })),
       pendingReports,
       recentAuditLogs,
     };

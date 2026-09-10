@@ -39,7 +39,7 @@ export async function POST(
     return NextResponse.json({ error: "Listing not found" }, { status: 404 });
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: any) => {
     await tx.report.create({
       data: {
         userId,

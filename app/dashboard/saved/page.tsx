@@ -27,8 +27,8 @@ async function getSavedListings(userId: string): Promise<Listing[]> {
       orderBy: { createdAt: "desc" },
     });
     return saved
-      .filter((s) => s.listing.status === "PUBLISHED")
-      .map((s) => ({
+      .filter((s: any) => s.listing.status === "PUBLISHED")
+      .map((s: any) => ({
         id: s.listing.id,
         title: s.listing.title,
         price: s.listing.price,
@@ -39,7 +39,7 @@ async function getSavedListings(userId: string): Promise<Listing[]> {
         city: s.listing.location?.city ?? "",
         state: s.listing.location?.state ?? "",
         address: s.listing.location?.address ?? undefined,
-        images: s.listing.images.map((img) => img.url),
+        images: s.listing.images.map((img: any) => img.url),
         createdAt: s.listing.createdAt.toISOString(),
       }));
   } catch (err) {

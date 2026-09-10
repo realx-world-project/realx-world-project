@@ -55,7 +55,7 @@ export async function PATCH(
       updateData = { role: parsed.data.role };
     }
 
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: any) => {
       const updated = await tx.user.update({
         where: { id: targetId },
         data: updateData,
