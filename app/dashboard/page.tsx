@@ -47,7 +47,6 @@ function getRoleBadgeClass(role: string): string {
   switch (role) {
     case "SELLER": return "bg-[#D4AF37] text-black font-semibold border-transparent";
     case "ADMIN":  return "bg-red-900 text-white border-transparent";
-    case "AGENT":  return "bg-green-900 text-white border-transparent";
     default:       return "bg-gray-800 text-white border-transparent";
   }
 }
@@ -59,7 +58,7 @@ export default async function DashboardPage() {
   const role = (session.user as any).role as string;
   const name = session.user.name ?? "User";
   const userId = (session.user as any).id as string;
-  const isSellerOrAgent = role === "SELLER" || role === "AGENT";
+  const isSeller = role === "SELLER";
 
   let pendingCount = 0;
   let publishedCount = 0;
@@ -68,7 +67,7 @@ export default async function DashboardPage() {
   let recentListings: Listing[] = [];
 
   try {
-    if (isSellerOrAgent) {
+    if (isSeller) {
       const [pending, published, rejected, recent] = await Promise.all([
         prisma.listing.count({ where: { userId, status: "PENDING" } }),
         prisma.listing.count({ where: { userId, status: "PUBLISHED" } }),
@@ -95,11 +94,11 @@ export default async function DashboardPage() {
   const tipText =
     role === "BUYER"
       ? `You have ${savedCount} saved ${savedCount === 1 ? "property" : "properties"}.`
-      : isSellerOrAgent
+      : isSeller
       ? `${pendingCount} pending · ${publishedCount} published · ${rejectedCount} rejected`
       : "Welcome to your dashboard.";
 
-  const quickCards = isSellerOrAgent ? sellerCards : buyerCards;
+  const quickCards = isSeller ? sellerCards : buyerCards;
 
   return (
     <div className="space-y-8">
@@ -137,8 +136,8 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Recent Listings — sellers/agents only */}
-      {isSellerOrAgent && (
+      {/* Recent Listings — sellers only */}
+      {isSeller && (
         <section>
           <h2 className="mb-4 text-lg font-semibold">Recent Listings</h2>
           {recentListings.length === 0 ? (

@@ -55,7 +55,6 @@ export function welcomeEmail(name: string, role: string): string {
   const roleDisplay = {
     BUYER: "Property Buyer",
     SELLER: "Property Seller",
-    AGENT: "Real Estate Agent",
     ADMIN: "Administrator",
   }[role] ?? role;
 
@@ -65,8 +64,6 @@ export function welcomeEmail(name: string, role: string): string {
         "You can now browse thousands of verified property listings across Nigeria, save your favourites, and connect with trusted agents and sellers.",
       SELLER:
         "You can now list your properties for sale or rent, manage your listings, and connect with serious buyers across Nigeria.",
-      AGENT:
-        "You can now list properties on behalf of your clients, manage multiple listings, and grow your real estate business on RealX World.",
       ADMIN: "You have full administrative access to the RealX World platform.",
     }[role] ?? "";
 

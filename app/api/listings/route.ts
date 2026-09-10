@@ -17,7 +17,7 @@ const LISTING_SELECT = {
 };
 
 export async function POST(request: NextRequest) {
-  const session = await requireRole(["SELLER", "AGENT"]);
+  const session = await requireRole(["SELLER"]);
 
   if (session instanceof NextResponse) {
     return session;

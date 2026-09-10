@@ -8,7 +8,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await requireRole(["ADMIN", "AGENT", "SELLER", "BUYER"]);
+  const session = await requireRole(["ADMIN", "SELLER", "BUYER"]);
 
   if (session instanceof NextResponse) {
     return session;

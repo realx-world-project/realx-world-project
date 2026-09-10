@@ -353,7 +353,7 @@ export async function main() {
         email: data.email,
         phone: data.phone,
         passwordHash,
-        role: "AGENT",
+        role: "SELLER",
         isVerified: true,
         isActive: true,
       },
@@ -365,7 +365,7 @@ export async function main() {
         action: "SEED_CREATE",
         entity: "User",
         entityId: agent.id,
-        meta: { role: "AGENT", source: "seed" },
+        meta: { role: "SELLER", source: "seed" },
       },
     });
 

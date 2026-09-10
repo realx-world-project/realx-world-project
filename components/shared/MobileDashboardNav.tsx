@@ -27,12 +27,11 @@ export function MobileDashboardNav() {
   const { data: session } = useSession();
   const pathname = usePathname();
 
-  const isSellerOrAgent =
-    session?.user?.role === "SELLER" || session?.user?.role === "AGENT";
+  const isSeller = session?.user?.role === "SELLER";
 
   const allLinks = [
     ...baseLinks.slice(0, 2),
-    ...(isSellerOrAgent ? roleLinks : []),
+    ...(isSeller ? roleLinks : []),
     ...baseLinks.slice(2),
   ];
 

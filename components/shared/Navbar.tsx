@@ -36,7 +36,6 @@ const getRoleVariant = (role: string) => {
   switch (role) {
     case "BUYER":  return "secondary";
     case "SELLER": return "default";
-    case "AGENT":  return "outline";
     case "ADMIN":  return "destructive";
     default:       return "secondary";
   }

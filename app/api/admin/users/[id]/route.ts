@@ -8,7 +8,7 @@ const userActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("UNSUSPEND") }),
   z.object({
     action: z.literal("CHANGE_ROLE"),
-    role: z.enum(["ADMIN", "AGENT", "SELLER", "BUYER"]),
+    role: z.enum(["ADMIN", "SELLER", "BUYER"]),
   }),
 ]);
 

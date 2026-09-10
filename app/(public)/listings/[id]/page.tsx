@@ -46,7 +46,7 @@ function mapPrismaListing(raw: any): Listing {
     images: (raw.images ?? []).map((img: any) => img.url),
     createdAt: raw.createdAt?.toISOString(),
     phone: raw.user?.phone ?? undefined,
-    seller: raw.user?.name ? { name: raw.user.name, role: raw.user.role ?? "AGENT" } : undefined,
+    seller: raw.user?.name ? { name: raw.user.name, role: raw.user.role ?? "SELLER" } : undefined,
   };
 }
 

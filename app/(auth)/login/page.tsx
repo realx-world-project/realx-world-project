@@ -27,7 +27,7 @@ type LoginForm = {
 
 function redirectPathForRole(role: string | undefined): string {
   if (role === "ADMIN") return "/admin/dashboard";
-  if (role === "SELLER" || role === "AGENT") return "/dashboard/listings";
+  if (role === "SELLER") return "/dashboard/listings";
   return "/dashboard";
 }
 

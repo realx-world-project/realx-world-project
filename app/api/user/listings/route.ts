@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
-  const session = await requireRole(["ADMIN", "AGENT", "SELLER", "BUYER"]);
+  const session = await requireRole(["ADMIN", "SELLER", "BUYER"]);
 
   if (session instanceof NextResponse) {
     return session;

@@ -22,7 +22,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type UserRole = "ADMIN" | "AGENT" | "SELLER" | "BUYER";
+export type UserRole = "ADMIN" | "SELLER" | "BUYER";
 
 export interface AdminUser {
   id: string;
@@ -85,7 +85,6 @@ function ChangeRoleDialog({
             <SelectContent>
               <SelectItem value="BUYER">Buyer</SelectItem>
               <SelectItem value="SELLER">Seller</SelectItem>
-              <SelectItem value="AGENT">Agent</SelectItem>
               <SelectItem value="ADMIN">Admin</SelectItem>
             </SelectContent>
           </Select>
@@ -267,7 +266,6 @@ export function AdminUserFilters({
         <SelectContent>
           <SelectItem value="all">All Roles</SelectItem>
           <SelectItem value="ADMIN">Admin</SelectItem>
-          <SelectItem value="AGENT">Agent</SelectItem>
           <SelectItem value="SELLER">Seller</SelectItem>
           <SelectItem value="BUYER">Buyer</SelectItem>
         </SelectContent>
@@ -290,7 +288,6 @@ export function AdminUserFilters({
 
 export const roleVariants: Record<UserRole, "destructive" | "default" | "warning" | "secondary"> = {
   ADMIN: "destructive",
-  AGENT: "default",
   SELLER: "warning",
   BUYER: "secondary",
 };

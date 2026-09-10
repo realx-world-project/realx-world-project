@@ -4,7 +4,6 @@ generator client {
 
 enum UserRole {
   ADMIN
-  AGENT
   SELLER
   BUYER
 }
