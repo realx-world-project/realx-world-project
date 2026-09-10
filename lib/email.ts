@@ -196,3 +196,251 @@ export function welcomeEmail(name: string, role: string): string {
 </body>
 </html>`;
 }
+
+// ─── Shared layout for notification emails ────────────────────────────────
+
+function reasonBox(reason: string): string {
+  return `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;background-color:#FEF3C7;border-left:4px solid #F59E0B;border-radius:6px;">
+      <tr>
+        <td style="padding:16px 20px;">
+          <span style="color:#92400E;font-size:14px;line-height:1.6;"><strong>Reason:</strong> ${reason}</span>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+function notificationEmail({
+  heading,
+  bodyHtml,
+  ctaLabel,
+  ctaUrl,
+}: {
+  heading: string;
+  bodyHtml: string;
+  ctaLabel: string;
+  ctaUrl: string;
+}): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RealX World</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#0A0A0A;padding:32px 40px;text-align:center;border-radius:12px 12px 0 0;">
+              <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:2px;">
+                <span style="color:#D4AF37;">REAL</span><span style="color:#ffffff;">X</span>
+                <span style="color:#D4AF37;font-size:16px;font-weight:400;letter-spacing:1px;display:block;margin-top:4px;">...LIMITLESS REAL ESTATE EXCHANGE.</span>
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#ffffff;padding:40px;">
+
+              <h2 style="margin:0 0 16px 0;color:#0A0A0A;font-size:24px;font-weight:700;">
+                ${heading}
+              </h2>
+
+              ${bodyHtml}
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+                <tr>
+                  <td align="center">
+                    <a href="${ctaUrl}"
+                       style="display:inline-block;background-color:#D4AF37;color:#0A0A0A;padding:16px 40px;border-radius:8px;font-size:16px;font-weight:700;text-decoration:none;letter-spacing:0.5px;">
+                      ${ctaLabel}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#0A0A0A;padding:24px 40px;text-align:center;border-radius:0 0 12px 12px;">
+              <p style="margin:0 0 8px 0;color:#D4AF37;font-size:13px;font-weight:700;letter-spacing:1px;">
+                REALX WORLD
+              </p>
+              <p style="margin:0 0 8px 0;color:#6B7280;font-size:12px;">
+                Nigeria's Limitless Real Estate Exchange
+              </p>
+              <p style="margin:0;color:#4A5568;font-size:12px;">
+                © 2025 RealX World. All rights reserved.
+              </p>
+              <p style="margin:8px 0 0 0;">
+                <a href="https://www.realxworld.net" style="color:#D4AF37;font-size:12px;text-decoration:none;">www.realxworld.net</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ─── Listing notifications ─────────────────────────────────────────────────
+
+export function listingApprovedEmail(listingTitle: string): string {
+  return notificationEmail({
+    heading: "Your Listing Has Been Approved! 🎉",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Great news! Your property listing '<strong>${listingTitle}</strong>' has been reviewed and approved by our team. It is now live and visible to buyers across Nigeria.
+      </p>
+    `,
+    ctaLabel: "View My Listings",
+    ctaUrl: "https://www.realxworld.net/dashboard/listings",
+  });
+}
+
+export function listingRejectedEmail(listingTitle: string, reason?: string): string {
+  return notificationEmail({
+    heading: "Your Listing Was Not Approved",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Unfortunately, your property listing '<strong>${listingTitle}</strong>' was not approved at this time.
+      </p>
+      ${reason ? reasonBox(reason) : ""}
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Please review your listing and resubmit with the necessary corrections.
+      </p>
+    `,
+    ctaLabel: "Edit My Listing",
+    ctaUrl: "https://www.realxworld.net/dashboard/listings",
+  });
+}
+
+// ─── Professional notifications ────────────────────────────────────────────
+
+export function professionalApprovedEmail(name: string): string {
+  return notificationEmail({
+    heading: "You Are Now a Verified Professional on RealX World! 🎉",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Hello ${name}, your professional profile has been reviewed and approved. You are now listed in the RealX World Professionals Directory and visible to clients across Nigeria.
+      </p>
+    `,
+    ctaLabel: "View My Profile",
+    ctaUrl: "https://www.realxworld.net/professionals",
+  });
+}
+
+export function professionalRejectedEmail(name: string): string {
+  return notificationEmail({
+    heading: "Professional Profile Not Approved",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Hello ${name}, unfortunately your professional profile was not approved at this time. Please review your details and resubmit.
+      </p>
+    `,
+    ctaLabel: "Update My Profile",
+    ctaUrl: "https://www.realxworld.net/dashboard/professional",
+  });
+}
+
+// ─── Vendor notifications ───────────────────────────────────────────────────
+
+export function vendorApprovedEmail(businessName: string): string {
+  return notificationEmail({
+    heading: "Your Vendor Account Is Now Active! 🎉",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        ${businessName} has been approved as a verified vendor on the RealX World Building Materials Marketplace. You can now list your products and reach buyers across Nigeria.
+      </p>
+    `,
+    ctaLabel: "Start Listing Products",
+    ctaUrl: "https://www.realxworld.net/dashboard/vendor",
+  });
+}
+
+export function vendorRejectedEmail(businessName: string): string {
+  return notificationEmail({
+    heading: "Vendor Application Not Approved",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Unfortunately, the vendor application for ${businessName} was not approved at this time. Please review your details and resubmit.
+      </p>
+    `,
+    ctaLabel: "Update My Application",
+    ctaUrl: "https://www.realxworld.net/dashboard/vendor",
+  });
+}
+
+// ─── KYC notifications ──────────────────────────────────────────────────────
+
+export function kycVerifiedEmail(name: string): string {
+  return notificationEmail({
+    heading: "Your Identity Has Been Verified ✓",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Hello ${name}, your identity has been successfully verified on RealX World. You can now list properties on our platform.
+      </p>
+    `,
+    ctaLabel: "Start Listing",
+    ctaUrl: "https://www.realxworld.net/dashboard/listings/new",
+  });
+}
+
+export function kycFailedEmail(name: string, reason?: string): string {
+  return notificationEmail({
+    heading: "Identity Verification Unsuccessful",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Hello ${name}, we were unable to verify your identity at this time.
+      </p>
+      ${reason ? reasonBox(reason) : ""}
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Please try again with a different ID type or contact support if you continue to experience issues.
+      </p>
+    `,
+    ctaLabel: "Try Again",
+    ctaUrl: "https://www.realxworld.net/dashboard/kyc",
+  });
+}
+
+// ─── Material listing notifications ────────────────────────────────────────
+
+export function materialListingApprovedEmail(title: string): string {
+  return notificationEmail({
+    heading: "Your Material Listing Is Now Live! 🎉",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Your listing '<strong>${title}</strong>' has been approved and is now visible in the RealX World Building Materials Marketplace.
+      </p>
+    `,
+    ctaLabel: "View Marketplace",
+    ctaUrl: "https://www.realxworld.net/materials",
+  });
+}
+
+export function materialListingRejectedEmail(title: string): string {
+  return notificationEmail({
+    heading: "Material Listing Not Approved",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Your listing '<strong>${title}</strong>' was not approved at this time. Please review and resubmit.
+      </p>
+    `,
+    ctaLabel: "Edit My Listings",
+    ctaUrl: "https://www.realxworld.net/dashboard/vendor",
+  });
+}

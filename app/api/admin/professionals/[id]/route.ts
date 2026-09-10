@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { sendEmail, professionalApprovedEmail, professionalRejectedEmail } from "@/lib/email";
 
 const bodySchema = z.object({ status: z.enum(["APPROVED", "REJECTED", "SUSPENDED"]) });
 
@@ -29,6 +30,27 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       meta: { status },
     },
   });
+
+  const prof = await db.professional.findUnique({
+    where: { id },
+    include: { user: { select: { email: true, name: true } } },
+  });
+
+  if (prof?.user?.email) {
+    if (status === "APPROVED") {
+      sendEmail({
+        to: prof.user.email,
+        subject: "Your professional profile is approved — RealX World",
+        html: professionalApprovedEmail(prof.user.name ?? ""),
+      }).catch(console.error);
+    } else if (status === "REJECTED") {
+      sendEmail({
+        to: prof.user.email,
+        subject: "Update on your professional profile — RealX World",
+        html: professionalRejectedEmail(prof.user.name ?? ""),
+      }).catch(console.error);
+    }
+  }
 
   return NextResponse.json(updated);
 }

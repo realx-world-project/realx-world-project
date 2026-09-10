@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { sendEmail, vendorApprovedEmail, vendorRejectedEmail } from "@/lib/email";
 
 const bodySchema = z.object({ status: z.enum(["APPROVED", "REJECTED", "SUSPENDED"]) });
 
@@ -34,6 +35,27 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       meta: { status },
     },
   });
+
+  const vendorWithUser = await db.materialVendor.findUnique({
+    where: { id },
+    include: { user: { select: { email: true } } },
+  });
+
+  if (vendorWithUser?.user?.email) {
+    if (parsed.data.status === "APPROVED") {
+      sendEmail({
+        to: vendorWithUser.user.email,
+        subject: "Your vendor account is approved — RealX World",
+        html: vendorApprovedEmail(vendorWithUser.businessName),
+      }).catch(console.error);
+    } else if (parsed.data.status === "REJECTED") {
+      sendEmail({
+        to: vendorWithUser.user.email,
+        subject: "Update on your vendor application — RealX World",
+        html: vendorRejectedEmail(vendorWithUser.businessName),
+      }).catch(console.error);
+    }
+  }
 
   return NextResponse.json(updated);
 }

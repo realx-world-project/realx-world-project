@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { sendEmail, kycVerifiedEmail, kycFailedEmail } from "@/lib/email";
 
 const bodySchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("VERIFIED") }),
@@ -50,6 +51,27 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       meta: isVerified ? { status: "VERIFIED" } : { status: "FAILED", failureReason },
     },
   });
+
+  const kycRecord = await db.kycVerification.findUnique({
+    where: { id },
+    include: { user: { select: { email: true, name: true } } },
+  });
+
+  if (kycRecord?.user?.email) {
+    if (body.status === "VERIFIED") {
+      sendEmail({
+        to: kycRecord.user.email,
+        subject: "Identity verified — RealX World",
+        html: kycVerifiedEmail(kycRecord.user.name ?? ""),
+      }).catch(console.error);
+    } else if (body.status === "FAILED") {
+      sendEmail({
+        to: kycRecord.user.email,
+        subject: "Identity verification update — RealX World",
+        html: kycFailedEmail(kycRecord.user.name ?? "", body.failureReason),
+      }).catch(console.error);
+    }
+  }
 
   return NextResponse.json(updated);
 }
