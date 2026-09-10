@@ -59,6 +59,7 @@ model User {
   auditLogs    AuditLog[]
   exports      Export[]
   professional Professional?
+  materialVendor MaterialVendor?
 
   @@map("users")
 }
@@ -228,6 +229,79 @@ model ProfessionalCredential {
   createdAt      DateTime     @default(now())
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   @@map("professional_credentials")
+}
+
+enum MaterialCategory {
+  CEMENT
+  STEEL_RODS
+  SAND
+  GRANITE
+  BLOCKS
+  TIMBER
+  ROOFING
+  TILES
+  PAINT
+  PLUMBING
+  ELECTRICAL
+  DOORS_WINDOWS
+  FINISHING
+  HEAVY_EQUIPMENT
+  OTHER
+}
+
+enum MaterialListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model MaterialVendor {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  businessName String
+  description String
+  phone       String
+  whatsapp    String?
+  email       String?
+  address     String
+  state       String
+  isVerified  Boolean   @default(false)
+  status      MaterialListingStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings    MaterialListing[]
+  @@map("material_vendors")
+}
+
+model MaterialListing {
+  id          String           @id @default(cuid())
+  vendorId    String
+  title       String
+  description String
+  category    MaterialCategory
+  price       Float
+  unit        String
+  minOrder    Int              @default(1)
+  state       String
+  status      MaterialListingStatus @default(PENDING)
+  images      MaterialImage[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  vendor      MaterialVendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  @@map("material_listings")
+}
+
+model MaterialImage {
+  id        String          @id @default(cuid())
+  listingId String
+  url       String
+  publicId  String
+  isPrimary Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  listing   MaterialListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  @@map("material_images")
 }
 
 datasource db {
