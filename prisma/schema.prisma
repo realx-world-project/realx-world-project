@@ -61,6 +61,10 @@ model User {
   materialVendor MaterialVendor?
   kycVerification KycVerification?
   kycStatus       KycStatus @default(NOT_SUBMITTED)
+  payments        Payment[]
+  escrowsAsBuyer  Escrow[]  @relation("EscrowBuyer")
+  escrowsAsSeller Escrow[]  @relation("EscrowSeller")
+  enquiries       Enquiry[]
 
   @@map("users")
 }
@@ -84,6 +88,9 @@ model Listing {
   images      ListingImage[]
   savedBy     SavedListing[]
   reports     Report[]
+  payments    Payment[]
+  escrows     Escrow[]
+  enquiries   Enquiry[]
 
   @@map("listings")
 }
@@ -335,6 +342,90 @@ model MaterialImage {
   createdAt DateTime        @default(now())
   listing   MaterialListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
   @@map("material_images")
+}
+
+enum PaymentType {
+  LISTING_FEE
+  ENQUIRY_FEE
+  ESCROW
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum EscrowStatus {
+  HOLDING
+  RELEASED
+  REFUNDED
+  DISPUTED
+}
+
+model PlatformSettings {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           String
+  description     String?
+  updatedAt       DateTime @updatedAt
+  updatedBy       String?
+  @@map("platform_settings")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  userId          String
+  type            PaymentType
+  amount          Float
+  currency        String        @default("NGN")
+  status          PaymentStatus @default(PENDING)
+  paystackRef     String?       @unique
+  paystackData    Json?
+  listingId       String?
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id])
+  listing         Listing?      @relation(fields: [listingId], references: [id])
+  escrow          Escrow?
+  enquiry         Enquiry?
+  @@map("payments")
+}
+
+model Escrow {
+  id              String       @id @default(cuid())
+  paymentId       String       @unique
+  buyerId         String
+  sellerId        String
+  listingId       String
+  amount          Float
+  commission      Float
+  sellerAmount    Float
+  status          EscrowStatus @default(HOLDING)
+  releasedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  payment         Payment      @relation(fields: [paymentId], references: [id])
+  buyer           User         @relation("EscrowBuyer", fields: [buyerId], references: [id])
+  seller          User         @relation("EscrowSeller", fields: [sellerId], references: [id])
+  listing         Listing      @relation(fields: [listingId], references: [id])
+  @@map("escrows")
+}
+
+model Enquiry {
+  id              String        @id @default(cuid())
+  buyerId         String
+  listingId       String
+  paymentId       String?       @unique
+  isPaid          Boolean       @default(false)
+  message         String?
+  createdAt       DateTime      @default(now())
+  buyer           User          @relation(fields: [buyerId], references: [id])
+  listing         Listing       @relation(fields: [listingId], references: [id])
+  payment         Payment?      @relation(fields: [paymentId], references: [id])
+  @@map("enquiries")
 }
 
 datasource db {

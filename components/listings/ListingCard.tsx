@@ -23,6 +23,7 @@ export interface Listing {
   images: string[];
   createdAt?: string;
   phone?: string;
+  sellerEmail?: string;
   seller?: {
     name: string;
     role: string;

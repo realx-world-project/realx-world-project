@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { MapPin, Calendar, User, Phone, ArrowLeft } from "lucide-react";
+import { MapPin, Calendar, User, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { ImageGallery } from "@/components/listings/ImageGallery";
 import { BookmarkToggle } from "@/components/listings/BookmarkToggle";
 import { ReportDialog } from "@/components/listings/ReportDialog";
+import { EnquiryButton } from "@/components/listings/EnquiryButton";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Listing } from "@/components/listings/ListingCard";
@@ -46,6 +47,7 @@ function mapPrismaListing(raw: any): Listing {
     images: (raw.images ?? []).map((img: any) => img.url),
     createdAt: raw.createdAt?.toISOString(),
     phone: raw.user?.phone ?? undefined,
+    sellerEmail: raw.user?.email ?? undefined,
     seller: raw.user?.name ? { name: raw.user.name, role: raw.user.role ?? "SELLER" } : undefined,
   };
 }
@@ -237,16 +239,12 @@ export default async function ListingDetailPage({
 
             <ReportDialog listingId={listing.id} listingTitle={listing.title} />
 
-            {listing.phone ? (
-              <Button className="w-full" size="lg">
-                <Phone className="mr-2 h-4 w-4" />
-                {listing.phone}
-              </Button>
-            ) : (
-              <div className="rounded-lg bg-muted p-3 text-center text-sm text-muted-foreground">
-                Contact info not available
-              </div>
-            )}
+            <EnquiryButton
+              listingId={listing.id}
+              sellerPhone={listing.phone}
+              sellerEmail={listing.sellerEmail}
+              paymentsEnabled={false}
+            />
           </div>
         </div>
       </div>

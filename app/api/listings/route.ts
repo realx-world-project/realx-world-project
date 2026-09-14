@@ -52,6 +52,13 @@ export async function POST(request: NextRequest) {
   const { title, description, price, type, category, location, images } = parsed.data;
   const userId = session.user.id as string;
 
+  // Payment flow: when PAYMENTS_ENABLED is true, the listing fee is not
+  // gated here — the listing is still created with status PENDING as
+  // today. The gate lives in the dashboard UI: after creating a listing,
+  // the seller is prompted to pay the listing fee (POST
+  // /api/payments/listing-fee) before the listing is presented as
+  // "submitted" to them. Admin review is unaffected either way — this
+  // route's behavior does not change based on PAYMENTS_ENABLED.
   try {
     await prisma.$connect();
 
