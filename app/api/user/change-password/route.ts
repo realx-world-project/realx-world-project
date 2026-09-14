@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { compare, hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/session";
+import { auth } from "@/lib/auth";
 
 const changePasswordSchema = z.object({
   currentPassword: z.string(),
@@ -14,10 +14,9 @@ const changePasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await requireRole(["ADMIN", "SELLER", "BUYER"]);
-
-  if (session instanceof NextResponse) {
-    return session;
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
@@ -28,7 +27,7 @@ export async function POST(request: NextRequest) {
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: session.user!.id },
+    where: { id: session.user.id as string },
   });
 
   if (!user || !user.passwordHash) {
@@ -43,16 +42,16 @@ export async function POST(request: NextRequest) {
   const newPasswordHash = await hash(parsed.data.newPassword, 12);
 
   await prisma.user.update({
-    where: { id: session.user!.id },
+    where: { id: session.user.id as string },
     data: { passwordHash: newPasswordHash },
   });
 
   await prisma.auditLog.create({
     data: {
-      userId: session.user!.id as string,
+      userId: session.user.id as string,
       action: "PASSWORD_CHANGED",
       entity: "User",
-      entityId: session.user!.id as string,
+      entityId: session.user.id as string,
       meta: {},
     },
   });

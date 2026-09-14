@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/session";
+import { auth } from "@/lib/auth";
 
 const reviewReportSchema = z.object({
   action: z.enum(["MARK_REVIEWED"]),
@@ -12,10 +12,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await requireRole(["ADMIN"]);
-
-  if (session instanceof NextResponse) {
-    return session;
+  const session = await auth();
+  if (!session?.user || (session.user as any).role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
@@ -26,7 +25,7 @@ export async function PATCH(
   }
 
   const reportId = params.id;
-  const adminId = session.user!.id as string;
+  const adminId = session.user.id as string;
   const { rejectListing } = parsed.data;
 
   const existing = await prisma.report.findUnique({

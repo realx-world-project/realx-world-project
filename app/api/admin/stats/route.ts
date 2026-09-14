@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import redis from "@/lib/redis";
-import { requireRole } from "@/lib/session";
+import { auth } from "@/lib/auth";
 
 const CACHE_TTL = 120; // 2 minutes
 const CACHE_KEY = "admin:stats";
 
 export async function GET(request: NextRequest) {
-  const session = await requireRole(["ADMIN"]);
-
-  if (session instanceof NextResponse) {
-    return session;
+  const session = await auth();
+  if (!session?.user || (session.user as any).role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const cached = await redis.get(CACHE_KEY) as string | null;

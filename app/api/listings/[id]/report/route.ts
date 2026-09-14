@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/session";
+import { auth } from "@/lib/auth";
 import { rateLimitByIP } from "@/lib/rateLimit";
 import { reportSchema } from "@/lib/validations/listing";
 
@@ -8,13 +8,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await requireRole(["ADMIN", "SELLER", "BUYER"]);
-
-  if (session instanceof NextResponse) {
-    return session;
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user!.id as string;
+  const userId = session.user.id as string;
   const rateLimit = await rateLimitByIP(`report:${userId}`, 3, "24 h");
 
   if (!rateLimit.success) {

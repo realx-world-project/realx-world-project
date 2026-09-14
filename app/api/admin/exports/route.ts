@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/session";
+import { auth } from "@/lib/auth";
 import { rateLimitByIP } from "@/lib/rateLimit";
 import { generateExport } from "@/lib/jobs/exportJob";
 
@@ -10,10 +10,12 @@ const exportSchema = z.object({
 });
 
 export async function GET(_request: NextRequest) {
-  const session = await requireRole(["ADMIN"]);
-  if (session instanceof NextResponse) return session;
+  const session = await auth();
+  if (!session?.user || (session.user as any).role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const userId = session.user!.id as string;
+  const userId = session.user.id as string;
 
   const exports = await prisma.export.findMany({
     where: { userId },
@@ -33,10 +35,12 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await requireRole(["ADMIN"]);
-  if (session instanceof NextResponse) return session;
+  const session = await auth();
+  if (!session?.user || (session.user as any).role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const adminId = session.user!.id as string;
+  const adminId = session.user.id as string;
   const rateLimit = await rateLimitByIP(`export:${adminId}`, 3, "1 h");
 
   if (!rateLimit.success) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRole, getServerSession } from "@/lib/session";
+import { getServerSession } from "@/lib/session";
+import { auth } from "@/lib/auth";
 import { listingSchema } from "@/lib/validations/listing";
 
 const LISTING_SELECT = {
@@ -17,16 +18,15 @@ const LISTING_SELECT = {
 };
 
 export async function POST(request: NextRequest) {
-  const session = await requireRole(["SELLER"]);
-
-  if (session instanceof NextResponse) {
-    return session;
+  const session = await auth();
+  if (!session?.user || (session.user as any).role !== "SELLER") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if ((session.user as any).role === "SELLER") {
     const db: any = prisma;
     const dbUser = await db.user.findUnique({
-      where: { id: session.user!.id as string },
+      where: { id: session.user.id as string },
       select: { kycStatus: true },
     });
 
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { title, description, price, type, category, location, images } = parsed.data;
-  const userId = session.user!.id as string;
+  const userId = session.user.id as string;
 
   try {
     await prisma.$connect();
