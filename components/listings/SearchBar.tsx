@@ -23,9 +23,12 @@ import {
 // ── Option tables ──────────────────────────────────────────────────────────
 
 const TYPE_OPTIONS = [
-  { value: "all",  label: "All Types" },
-  { value: "SALE", label: "For Sale" },
-  { value: "RENT", label: "For Rent" },
+  { value: "all",        label: "All Types" },
+  { value: "SALE",       label: "For Sale" },
+  { value: "SHORT_TERM", label: "Short-Term Rental" },
+  { value: "MONTHLY",    label: "Monthly Rental" },
+  { value: "ANNUAL",     label: "Annual Lease" },
+  { value: "LONG_TERM",  label: "Long-Term Lease" },
 ] as const;
 
 const CATEGORY_OPTIONS = [

@@ -26,10 +26,21 @@ const formatPrice = (price: number) =>
     maximumFractionDigits: 0,
   }).format(price);
 
-const typeClasses = {
-  SALE: "bg-blue-600 text-white border-transparent",
-  RENT: "bg-green-600 text-white border-transparent",
-} as const;
+const typeClasses: Record<string, string> = {
+  SALE: "bg-[#D4AF37] text-black border-transparent font-semibold",
+  SHORT_TERM: "bg-blue-600 text-white border-transparent",
+  MONTHLY: "bg-blue-600 text-white border-transparent",
+  ANNUAL: "bg-blue-600 text-white border-transparent",
+  LONG_TERM: "bg-blue-600 text-white border-transparent",
+};
+
+const typeLabels: Record<string, string> = {
+  SALE: "For Sale",
+  SHORT_TERM: "Short-Term Rental",
+  MONTHLY: "Monthly Rental",
+  ANNUAL: "Annual Lease",
+  LONG_TERM: "Long-Term Lease",
+};
 
 function mapPrismaListing(raw: any): Listing {
   return {
@@ -38,6 +49,7 @@ function mapPrismaListing(raw: any): Listing {
     description: raw.description,
     price: raw.price,
     type: raw.type,
+    leaseDuration: raw.leaseDuration ?? undefined,
     category: raw.category,
     status: raw.status,
     location: raw.location?.area || raw.location?.city || "",
@@ -93,7 +105,7 @@ export async function generateMetadata({
 
   const description = listing.description
     ? listing.description.slice(0, 160).replace(/\n/g, " ")
-    : `${listing.type === "RENT" ? "For Rent" : "For Sale"} — ${listing.category.toLowerCase()} property in ${listing.city}, ${listing.state}`;
+    : `${typeLabels[listing.type] ?? listing.type} — ${listing.category.toLowerCase()} property in ${listing.city}, ${listing.state}`;
 
   return {
     title: `${listing.title} | RealX World`,
@@ -147,7 +159,7 @@ export default async function ListingDetailPage({
             {/* Badges + title */}
             <div>
               <div className="mb-3 flex flex-wrap gap-2">
-                <Badge className={typeClasses[listing.type]}>{listing.type}</Badge>
+                <Badge className={typeClasses[listing.type]}>{typeLabels[listing.type] ?? listing.type}</Badge>
                 <Badge variant="outline">{listing.category}</Badge>
               </div>
               <h1 className="text-2xl font-bold sm:text-3xl">{listing.title}</h1>
@@ -163,9 +175,9 @@ export default async function ListingDetailPage({
             {/* Price */}
             <p className="text-2xl font-bold text-primary sm:text-3xl">
               {formatPrice(listing.price)}
-              {listing.type === "RENT" && (
+              {listing.leaseDuration && (
                 <span className="ml-1 text-lg font-normal text-muted-foreground">
-                  /year
+                  / {listing.leaseDuration}
                 </span>
               )}
             </p>
@@ -222,9 +234,9 @@ export default async function ListingDetailPage({
             <div className="lg:hidden">
               <p className="text-2xl font-bold text-primary">
                 {formatPrice(listing.price)}
-                {listing.type === "RENT" && (
+                {listing.leaseDuration && (
                   <span className="ml-1 text-sm font-normal text-muted-foreground">
-                    /yr
+                    / {listing.leaseDuration}
                   </span>
                 )}
               </p>

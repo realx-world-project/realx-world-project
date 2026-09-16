@@ -28,12 +28,38 @@ export const metadata: Metadata = {
 interface SearchParams {
   q?: string;
   type?: string;
+  listingGroup?: string;
   category?: string;
   state?: string;
   // SearchBar sends priceMin/priceMax in the URL
   priceMin?: string;
   priceMax?: string;
   page?: string;
+}
+
+const RENTAL_TYPES = ["SHORT_TERM", "MONTHLY", "ANNUAL", "LONG_TERM"];
+
+const TYPE_LABELS: Record<string, string> = {
+  SALE: "For Sale",
+  SHORT_TERM: "Short-Term Rentals",
+  MONTHLY: "Monthly Rentals",
+  ANNUAL: "Annual Leases",
+  LONG_TERM: "Long-Term Leases",
+};
+
+function buildListingsHref(
+  params: SearchParams,
+  overrides: { type?: string; listingGroup?: string }
+): string {
+  const newParams = new URLSearchParams();
+  if (params.q) newParams.set("q", params.q);
+  if (params.category && params.category !== "all") newParams.set("category", params.category);
+  if (params.state && params.state !== "all") newParams.set("state", params.state);
+  if (params.priceMin) newParams.set("priceMin", params.priceMin);
+  if (params.priceMax) newParams.set("priceMax", params.priceMax);
+  if (overrides.type) newParams.set("type", overrides.type);
+  if (overrides.listingGroup) newParams.set("listingGroup", overrides.listingGroup);
+  return `/listings?${newParams.toString()}`;
 }
 
 interface ListingsPageProps {
@@ -53,7 +79,11 @@ async function getListings(params: SearchParams): Promise<{
 
     const where: any = { status: "PUBLISHED" };
 
-    if (params.type && params.type !== "all") where.type = params.type;
+    if (params.type && params.type !== "all") {
+      where.type = params.type;
+    } else if (params.listingGroup === "RENT") {
+      where.type = { in: RENTAL_TYPES };
+    }
     if (params.category && params.category !== "all") where.category = params.category;
     if (params.q) {
       where.OR = [
@@ -116,61 +146,93 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
   const { listings, total, totalPages, page } = await getListings(params);
 
   const currentType = params.type ?? "all";
+  const isRentalGroup = params.listingGroup === "RENT";
 
-  const tabs = [
-    { label: "All Properties", value: "all" },
-    { label: "For Sale", value: "SALE" },
-    { label: "Rentals", value: "RENT" },
+  const heading =
+    currentType !== "all" && TYPE_LABELS[currentType]
+      ? TYPE_LABELS[currentType]
+      : isRentalGroup
+      ? "Rentals"
+      : "Browse Properties";
+
+  const subheading =
+    currentType === "SALE"
+      ? "Find properties available for purchase across Nigeria"
+      : isRentalGroup || RENTAL_TYPES.includes(currentType)
+      ? "Find rental properties available across Nigeria"
+      : "Find your dream property in Nigeria";
+
+  const primaryTabs = [
+    {
+      label: "All Properties",
+      active: currentType === "all" && !isRentalGroup,
+      href: buildListingsHref(params, {}),
+    },
+    {
+      label: "For Sale",
+      active: currentType === "SALE",
+      href: buildListingsHref(params, { type: "SALE" }),
+    },
+    {
+      label: "Rentals",
+      active: isRentalGroup,
+      href: buildListingsHref(params, { listingGroup: "RENT" }),
+    },
+  ];
+
+  const rentalSubTabs = [
+    { label: "All Rentals", value: "" },
+    { label: "Short-Term", value: "SHORT_TERM" },
+    { label: "Monthly", value: "MONTHLY" },
+    { label: "Annual", value: "ANNUAL" },
+    { label: "Long-Term", value: "LONG_TERM" },
   ];
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold sm:text-3xl">
-          {currentType === "SALE"
-            ? "Properties for Sale"
-            : currentType === "RENT"
-            ? "Rentals"
-            : "Browse Properties"}
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          {currentType === "SALE"
-            ? "Find properties available for purchase across Nigeria"
-            : currentType === "RENT"
-            ? "Find rental properties available across Nigeria"
-            : "Find your dream property in Nigeria"}
-        </p>
+        <h1 className="text-2xl font-bold sm:text-3xl">{heading}</h1>
+        <p className="mt-2 text-muted-foreground">{subheading}</p>
       </div>
 
       <div className="mb-6 flex gap-1 border-b border-gray-200">
-        {tabs.map((tab) => {
-          const isActive = currentType === tab.value;
-          const newParams = new URLSearchParams();
-          if (params.q) newParams.set("q", params.q);
-          if (params.category && params.category !== "all")
-            newParams.set("category", params.category);
-          if (params.state && params.state !== "all")
-            newParams.set("state", params.state);
-          if (params.priceMin) newParams.set("priceMin", params.priceMin);
-          if (params.priceMax) newParams.set("priceMax", params.priceMax);
-          if (tab.value !== "all") newParams.set("type", tab.value);
-          const href = `/listings?${newParams.toString()}`;
-          return (
-            <Link
-              key={tab.value}
-              href={href}
-              className={cn(
-                "px-6 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px",
-                isActive
-                  ? "border-[#D4AF37] text-[#D4AF37]"
-                  : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
-              )}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
+        {primaryTabs.map((tab) => (
+          <Link
+            key={tab.label}
+            href={tab.href}
+            className={cn(
+              "px-6 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px",
+              tab.active
+                ? "border-[#D4AF37] text-[#D4AF37]"
+                : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+            )}
+          >
+            {tab.label}
+          </Link>
+        ))}
       </div>
+
+      {isRentalGroup && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {rentalSubTabs.map((tab) => {
+            const isActive = tab.value ? currentType === tab.value : currentType === "all";
+            return (
+              <Link
+                key={tab.label}
+                href={buildListingsHref(params, { listingGroup: "RENT", type: tab.value || undefined })}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-[#D4AF37] text-black"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                )}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mb-8">
         <SearchBar />
@@ -213,7 +275,7 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
                     page > 1
                       ? `/listings?page=${page - 1}${
                           currentType !== "all" ? `&type=${currentType}` : ""
-                        }`
+                        }${isRentalGroup ? "&listingGroup=RENT" : ""}`
                       : "#"
                   }
                   aria-disabled={page <= 1}
@@ -224,7 +286,7 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
                   <PaginationLink
                     href={`/listings?page=${pageNum}${
                       currentType !== "all" ? `&type=${currentType}` : ""
-                    }`}
+                    }${isRentalGroup ? "&listingGroup=RENT" : ""}`}
                     isActive={pageNum === page}
                   >
                     {pageNum}
@@ -237,7 +299,7 @@ async function ListingsContent({ searchParams }: ListingsPageProps) {
                     page < totalPages
                       ? `/listings?page=${page + 1}${
                           currentType !== "all" ? `&type=${currentType}` : ""
-                        }`
+                        }${isRentalGroup ? "&listingGroup=RENT" : ""}`
                       : "#"
                   }
                   aria-disabled={page >= totalPages}

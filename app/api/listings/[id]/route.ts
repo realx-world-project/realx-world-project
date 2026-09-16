@@ -14,6 +14,7 @@ export async function GET(
       description: true,
       price: true,
       type: true,
+      leaseDuration: true,
       category: true,
       status: true,
       publishedAt: true,

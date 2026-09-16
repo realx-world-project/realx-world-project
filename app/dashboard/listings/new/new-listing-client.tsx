@@ -36,11 +36,27 @@ const nigerianStates = [
   "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT",
 ];
 
+const listingTypeOptions = [
+  { value: "SALE", label: "For Sale" },
+  { value: "SHORT_TERM", label: "Short-Term Rental (Nightly/Weekly)" },
+  { value: "MONTHLY", label: "Monthly Rental" },
+  { value: "ANNUAL", label: "Annual Lease" },
+  { value: "LONG_TERM", label: "Long-Term Lease (3+ Years)" },
+] as const;
+
+const leaseDurationPlaceholders: Record<string, string> = {
+  SHORT_TERM: "e.g. per night, per week",
+  MONTHLY: "e.g. per month",
+  ANNUAL: "e.g. per year, 1 year lease",
+  LONG_TERM: "e.g. 3 years, 10 years, 40 years",
+};
+
 const createListingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100, "Title must be at most 100 characters"),
   description: z.string().min(50, "Description must be at least 50 characters"),
   price: z.coerce.number().positive("Price must be a positive number"),
-  type: z.enum(["SALE", "RENT"], { required_error: "Please select a property type" }),
+  type: z.enum(["SALE", "SHORT_TERM", "MONTHLY", "ANNUAL", "LONG_TERM"], { required_error: "Please select a property type" }),
+  leaseDuration: z.string().optional(),
   category: z.enum(["RESIDENTIAL", "COMMERCIAL", "LAND"], { required_error: "Please select a category" }),
   state: z.string().min(1, "Please select a state"),
   city: z.string().min(1, "City is required"),
@@ -73,6 +89,7 @@ export default function NewListingClient() {
       description: "",
       price: undefined,
       type: undefined,
+      leaseDuration: "",
       category: undefined,
       state: "",
       city: "",
@@ -80,6 +97,8 @@ export default function NewListingClient() {
       address: "",
     },
   });
+
+  const selectedType = form.watch("type");
 
   const uploadFile = async (id: string, file: File) => {
     try {
@@ -173,6 +192,7 @@ export default function NewListingClient() {
           description: data.description,
           price: data.price,
           type: data.type,
+          leaseDuration: data.type === "SALE" ? undefined : data.leaseDuration || undefined,
           category: data.category,
           location: {
             state: data.state,
@@ -289,7 +309,7 @@ export default function NewListingClient() {
                   name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Property Type</FormLabel>
+                      <FormLabel>Listing Type</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -297,14 +317,33 @@ export default function NewListingClient() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="SALE">For Sale</SelectItem>
-                          <SelectItem value="RENT">For Rent</SelectItem>
+                          {listingTypeOptions.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {selectedType && selectedType !== "SALE" && (
+                  <FormField
+                    control={form.control}
+                    name="leaseDuration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lease Duration / Rate</FormLabel>
+                        <FormControl>
+                          <Input placeholder={leaseDurationPlaceholders[selectedType]} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

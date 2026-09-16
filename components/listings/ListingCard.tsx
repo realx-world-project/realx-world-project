@@ -13,7 +13,8 @@ export interface Listing {
   title: string;
   description?: string;
   price: number;
-  type: "SALE" | "RENT";
+  type: "SALE" | "SHORT_TERM" | "MONTHLY" | "ANNUAL" | "LONG_TERM";
+  leaseDuration?: string;
   category: "RESIDENTIAL" | "COMMERCIAL" | "LAND";
   status: "PENDING" | "APPROVED" | "PUBLISHED" | "REJECTED";
   location: string;
@@ -52,8 +53,19 @@ const statusOverlayClasses = {
 
 const typeClasses = {
   SALE: "bg-[#D4AF37] hover:bg-[#B8961E] text-black border-transparent font-semibold",
-  RENT: "bg-black hover:bg-gray-900 text-[#D4AF37] border border-[#D4AF37]",
+  SHORT_TERM: "bg-blue-600 hover:bg-blue-700 text-white border-transparent",
+  MONTHLY: "bg-blue-600 hover:bg-blue-700 text-white border-transparent",
+  ANNUAL: "bg-blue-600 hover:bg-blue-700 text-white border-transparent",
+  LONG_TERM: "bg-blue-600 hover:bg-blue-700 text-white border-transparent",
 } as const;
+
+const typeLabels: Record<string, string> = {
+  SALE: "For Sale",
+  SHORT_TERM: "Short-Term",
+  MONTHLY: "Monthly",
+  ANNUAL: "Annual",
+  LONG_TERM: "Long-Term",
+};
 
 export function ListingCard({
   listing,
@@ -112,8 +124,10 @@ export function ListingCard({
           <CardContent className="p-4">
             <p className="mb-1 text-xl font-bold text-[#0A0A0A]">
               {formatPrice(listing.price)}
-              {listing.type === "RENT" && (
-                <span className="ml-1 text-sm font-normal text-muted-foreground">/yr</span>
+              {listing.leaseDuration && (
+                <span className="ml-1 text-sm font-normal text-muted-foreground">
+                  / {listing.leaseDuration}
+                </span>
               )}
             </p>
             <h3 className="mb-2 line-clamp-2 text-base font-medium leading-snug">
@@ -129,7 +143,7 @@ export function ListingCard({
 
           {/* Footer */}
           <CardFooter className="flex gap-2 border-t p-4 pt-3">
-            <Badge className={typeClasses[listing.type]}>{listing.type}</Badge>
+            <Badge className={typeClasses[listing.type]}>{typeLabels[listing.type] ?? listing.type}</Badge>
             <Badge variant="outline" className="text-muted-foreground">
               {listing.category}
             </Badge>

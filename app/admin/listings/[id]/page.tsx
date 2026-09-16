@@ -15,9 +15,20 @@ import { ModerationSidebar } from "./moderate-actions";
 const formatPrice = (n: number) =>
   new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n);
 
-const typeClasses = {
-  SALE: "bg-blue-600 text-white border-transparent",
-  RENT: "bg-green-600 text-white border-transparent",
+const typeClasses: Record<string, string> = {
+  SALE: "bg-[#D4AF37] text-black border-transparent font-semibold",
+  SHORT_TERM: "bg-blue-600 text-white border-transparent",
+  MONTHLY: "bg-blue-600 text-white border-transparent",
+  ANNUAL: "bg-blue-600 text-white border-transparent",
+  LONG_TERM: "bg-blue-600 text-white border-transparent",
+};
+
+const typeLabels: Record<string, string> = {
+  SALE: "For Sale",
+  SHORT_TERM: "Short-Term Rental",
+  MONTHLY: "Monthly Rental",
+  ANNUAL: "Annual Lease",
+  LONG_TERM: "Long-Term Lease",
 };
 
 const statusVariants = {
@@ -94,8 +105,8 @@ export default async function AdminListingReviewPage({
 
           <div>
             <div className="mb-3 flex flex-wrap gap-2">
-              <Badge className={typeClasses[raw.type as keyof typeof typeClasses]}>
-                {raw.type}
+              <Badge className={typeClasses[raw.type]}>
+                {typeLabels[raw.type] ?? raw.type}
               </Badge>
               <Badge variant="outline">{raw.category}</Badge>
               <Badge variant={statusVariants[raw.status as keyof typeof statusVariants] ?? "default"}>
@@ -111,8 +122,8 @@ export default async function AdminListingReviewPage({
 
           <p className="text-3xl font-bold text-primary">
             {formatPrice(raw.price)}
-            {raw.type === "RENT" && (
-              <span className="ml-1 text-lg font-normal text-muted-foreground">/year</span>
+            {raw.leaseDuration && (
+              <span className="ml-1 text-lg font-normal text-muted-foreground">/ {raw.leaseDuration}</span>
             )}
           </p>
 

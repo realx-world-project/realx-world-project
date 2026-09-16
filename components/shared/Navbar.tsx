@@ -29,7 +29,7 @@ const navLinks = [
 const listingsSubLinks = [
   { href: "/listings", label: "All Properties" },
   { href: "/listings?type=SALE", label: "For Sale" },
-  { href: "/listings?type=RENT", label: "Rentals" },
+  { href: "/listings?listingGroup=RENT", label: "Rentals" },
 ];
 
 const getRoleVariant = (role: string) => {
@@ -220,7 +220,7 @@ export function Navbar() {
                       For Sale
                     </Link>
                     <Link
-                      href="/listings?type=RENT"
+                      href="/listings?listingGroup=RENT"
                       className="px-4 py-2 ml-4 rounded-lg text-sm text-gray-600 hover:text-[#D4AF37] hover:bg-gray-50 transition-colors"
                     >
                       Rentals

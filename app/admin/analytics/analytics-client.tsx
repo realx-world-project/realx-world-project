@@ -54,7 +54,13 @@ const sumCounts = (arr: { count: number }[] | undefined) =>
 const findCount = (arr: { status?: string; count: number }[] | undefined, status: string) =>
   (arr ?? []).find((x) => x.status === status)?.count ?? 0;
 
-const typeColors: Record<string, string> = { SALE: "#D4AF37", RENT: "#0A0A0A" };
+const typeColors: Record<string, string> = {
+  SALE: "#D4AF37",
+  SHORT_TERM: "#2563EB",
+  MONTHLY: "#0A0A0A",
+  ANNUAL: "#16A34A",
+  LONG_TERM: "#9333EA",
+};
 const roleColors: Record<string, string> = { ADMIN: "#DC2626", SELLER: "#D4AF37", BUYER: "#9CA3AF" };
 const kycColors: Record<string, string> = {
   NOT_SUBMITTED: "#9CA3AF",

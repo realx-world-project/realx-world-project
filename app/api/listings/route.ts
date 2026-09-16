@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   }
 
-  const { title, description, price, type, category, location, images } = parsed.data;
+  const { title, description, price, type, leaseDuration, category, location, images } = parsed.data;
   const userId = session.user.id as string;
 
   // Payment flow: when PAYMENTS_ENABLED is true, the listing fee is not
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
           description,
           price,
           type,
+          leaseDuration: type === "SALE" ? null : leaseDuration || null,
           category,
           status: "PENDING",
           userId,

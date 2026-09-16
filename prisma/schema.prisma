@@ -10,7 +10,10 @@ enum UserRole {
 
 enum ListingType {
   SALE
-  RENT
+  SHORT_TERM
+  MONTHLY
+  ANNUAL
+  LONG_TERM
 }
 
 enum ListingCategory {
@@ -75,6 +78,7 @@ model Listing {
   description String
   price       Float
   type        ListingType
+  leaseDuration String?
   category    ListingCategory
   status      ListingStatus   @default(PENDING)
   userId      String

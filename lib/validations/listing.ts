@@ -4,7 +4,8 @@ export const listingSchema = z.object({
   title: z.string().min(10).max(100),
   description: z.string().min(50),
   price: z.number().positive(),
-  type: z.enum(["SALE", "RENT"]),
+  type: z.enum(["SALE", "SHORT_TERM", "MONTHLY", "ANNUAL", "LONG_TERM"]),
+  leaseDuration: z.string().optional(),
   category: z.enum(["RESIDENTIAL", "COMMERCIAL", "LAND"]),
   location: z.object({
     state: z.string().min(1),
@@ -38,7 +39,7 @@ export const reportSchema = z.object({
 
 export const searchSchema = z.object({
   q: z.string().optional(),
-  type: z.enum(["SALE", "RENT"]).optional(),
+  type: z.enum(["SALE", "SHORT_TERM", "MONTHLY", "ANNUAL", "LONG_TERM"]).optional(),
   category: z.enum(["RESIDENTIAL", "COMMERCIAL", "LAND"]).optional(),
   state: z.string().optional(),
   city: z.string().optional(),

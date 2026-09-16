@@ -49,7 +49,7 @@ type ListingSeed = {
   title: string;
   description: string;
   price: number;
-  type: "SALE" | "RENT";
+  type: "SALE" | "SHORT_TERM" | "MONTHLY" | "ANNUAL" | "LONG_TERM";
   category: "RESIDENTIAL" | "COMMERCIAL" | "LAND";
   state: string;
   city: string;
@@ -87,7 +87,7 @@ const listingsData: ListingSeed[] = [
     description:
       "Tastefully furnished 2 bedroom apartment in the prestigious Ikeja GRA. Features include a modern kitchen with fitted cabinets, air conditioning in all rooms, 24/7 security, covered parking, and a serene compound. Close to major banks, supermarkets, and transport links.",
     price: 3_500_000,
-    type: "RENT",
+    type: "ANNUAL",
     category: "RESIDENTIAL",
     state: "Lagos", city: "Ikeja", area: "GRA",
     address: "22 Obafemi Awolowo Way, Ikeja GRA, Lagos",
@@ -98,7 +98,7 @@ const listingsData: ListingSeed[] = [
     description:
       "Prime commercial office space on Lagos Island Marina district. Open plan layout with 3 private offices, boardroom, reception area, and 2 toilets. Located in a high-traffic commercial area with excellent visibility. Suitable for law firms, financial institutions, and corporate businesses.",
     price: 15_000_000,
-    type: "RENT",
+    type: "ANNUAL",
     category: "COMMERCIAL",
     state: "Lagos", city: "Lagos Island", area: "Marina",
     address: "45 Marina Street, Lagos Island, Lagos",
@@ -142,7 +142,7 @@ const listingsData: ListingSeed[] = [
     description:
       "Large commercial warehouse measuring 2000sqm in Apapa industrial hub. Features include high ceiling clearance, loading bay, office space, security room, and 24/7 access. Strategically located close to Apapa port making it ideal for logistics, manufacturing, and distribution companies.",
     price: 25_000_000,
-    type: "RENT",
+    type: "ANNUAL",
     category: "COMMERCIAL",
     state: "Lagos", city: "Apapa", area: "Creek Road",
     address: "10 Creek Road, Apapa, Lagos",
@@ -166,7 +166,7 @@ const listingsData: ListingSeed[] = [
     description:
       "Spacious 3 bedroom apartment in the heart of Wuse 2. The apartment features a large sitting room, dining area, fitted kitchen, and ample parking space. Located minutes from major banks, shopping malls, and restaurants. 24/7 power supply and security provided.",
     price: 4_500_000,
-    type: "RENT",
+    type: "ANNUAL",
     category: "RESIDENTIAL",
     state: "FCT (Abuja)", city: "Abuja", area: "Wuse 2",
     address: "15 Aminu Kano Crescent, Wuse 2, Abuja",
@@ -188,7 +188,7 @@ const listingsData: ListingSeed[] = [
     description:
       "Modern office complex in Abuja CBD. The property offers 500sqm of open plan office space spread across 2 floors with dedicated parking for 20 vehicles. Features include a reception lobby, server room, and backup power. Ideal for corporate organisations and government agencies.",
     price: 45_000_000,
-    type: "RENT",
+    type: "ANNUAL",
     category: "COMMERCIAL",
     state: "FCT (Abuja)", city: "Abuja", area: "CBD",
     address: "Plot 1234 Herbert Macaulay Way, CBD, Abuja",
@@ -223,7 +223,7 @@ const listingsData: ListingSeed[] = [
     description:
       "Clean 2 bedroom flat in Trans Amadi, Port Harcourt. Features a sitting room, kitchen, bathroom, and toilet. The compound is fenced and gated with a security guard. Located close to major oil servicing companies and industrial facilities. Suitable for working professionals.",
     price: 2_800_000,
-    type: "RENT",
+    type: "ANNUAL",
     category: "RESIDENTIAL",
     state: "Rivers", city: "Port Harcourt", area: "Trans Amadi",
     address: "33 Trans Amadi Industrial Layout, Port Harcourt",
@@ -269,7 +269,7 @@ const listingsData: ListingSeed[] = [
     description:
       "Clean and spacious 2 bedroom apartment in Sabon Gari, Kano. Features a sitting room, kitchen, bathroom, and a covered parking space. The compound is well maintained with a functional borehole. Suitable for working professionals and small families. Close to commercial areas and markets.",
     price: 1_800_000,
-    type: "RENT",
+    type: "ANNUAL",
     category: "RESIDENTIAL",
     state: "Kano", city: "Kano", area: "Sabon Gari",
     address: "22 Ibrahim Taiwo Road, Sabon Gari, Kano",
