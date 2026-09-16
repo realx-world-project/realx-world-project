@@ -24,6 +24,7 @@ const navLinks = [
   { href: "/materials", label: "Materials" },
   { href: "/about", label: "About" },
   { href: "/service", label: "Service" },
+  { href: "/join-us", label: "Join Us" },
 ];
 
 const listingsSubLinks = [

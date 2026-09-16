@@ -61,6 +61,11 @@ export function Footer() {
                   Our Services
                 </Link>
               </li>
+              <li>
+                <Link href="/join-us" className="text-gray-400 hover:text-[#D4AF37] transition-colors">
+                  Join Us
+                </Link>
+              </li>
             </ul>
           </div>
 

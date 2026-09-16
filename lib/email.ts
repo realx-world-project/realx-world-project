@@ -444,3 +444,20 @@ export function materialListingRejectedEmail(title: string): string {
     ctaUrl: "https://www.realxworld.net/dashboard/vendor",
   });
 }
+
+// ─── Join Us notifications ──────────────────────────────────────────────────
+
+export function joinUsConfirmationEmail(fullName: string): string {
+  return notificationEmail({
+    heading: "We Received Your Application",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Dear ${fullName}, thank you for applying to join RealX World. We have received your
+        application and will review it within 5-10 business days. Our team will contact you
+        at this email address with the outcome.
+      </p>
+    `,
+    ctaLabel: "Visit RealX World",
+    ctaUrl: "https://www.realxworld.net",
+  });
+}
