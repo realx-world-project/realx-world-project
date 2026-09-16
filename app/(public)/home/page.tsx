@@ -45,11 +45,23 @@ async function getRecentListings(): Promise<Listing[]> {
   }
 }
 
-const stats = [
-  { icon: Building2, value: "500+", label: "Listings" },
-  { icon: Users, value: "200+", label: "Agents" },
-  { icon: MapPin, value: "36", label: "States Covered" },
-];
+async function getPlatformStats() {
+  try {
+    const [listingsCount, membersCount, stateRows] = await Promise.all([
+      prisma.listing.count({ where: { status: "PUBLISHED" } }),
+      prisma.user.count(),
+      prisma.location.findMany({
+        where: { listings: { some: { status: "PUBLISHED" } } },
+        select: { state: true },
+        distinct: ["state"],
+      }),
+    ]);
+    return { listingsCount, membersCount, statesCount: stateRows.length };
+  } catch (err) {
+    console.error("getPlatformStats error:", err);
+    return { listingsCount: 0, membersCount: 0, statesCount: 0 };
+  }
+}
 
 const steps = [
   {
@@ -77,12 +89,31 @@ function SearchBarFallback() {
 
 export default async function HomePage() {
   let listings: Listing[] = [];
+  let platformStats = { listingsCount: 0, membersCount: 0, statesCount: 0 };
   try {
-    listings = await getRecentListings();
+    [listings, platformStats] = await Promise.all([getRecentListings(), getPlatformStats()]);
   } catch (e) {
     console.error("HomePage error:", e);
     listings = [];
   }
+
+  const stats = [
+    {
+      icon: Building2,
+      value: String(platformStats.listingsCount),
+      label: platformStats.listingsCount === 1 ? "Listing" : "Listings",
+    },
+    {
+      icon: Users,
+      value: String(platformStats.membersCount),
+      label: platformStats.membersCount === 1 ? "Member" : "Members",
+    },
+    {
+      icon: MapPin,
+      value: String(platformStats.statesCount),
+      label: platformStats.statesCount === 1 ? "State Covered" : "States Covered",
+    },
+  ];
 
   return (
     <div>
