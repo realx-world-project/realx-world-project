@@ -4,7 +4,7 @@ import redis from "@/lib/redis";
 import { auth } from "@/lib/auth";
 
 const CACHE_TTL = 120; // 2 minutes
-const CACHE_KEY = "admin:stats";
+const CACHE_KEY = "admin:stats:v2";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -26,6 +26,14 @@ export async function GET(request: NextRequest) {
       listingsByStatus,
       pendingReports,
       recentAuditLogs,
+      listingsRaw,
+      usersRaw,
+      professionalsByStatus,
+      materialListingsByStatus,
+      savedListingsCount,
+      kycByStatus,
+      paymentsByStatusType,
+      enquiriesCount,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.groupBy({ by: ["role"], _count: { role: true } }),
@@ -44,6 +52,57 @@ export async function GET(request: NextRequest) {
           user: { select: { email: true } },
         },
       }),
+
+      // Listings over time — last 12 months
+      prisma.listing.findMany({
+        where: {
+          createdAt: {
+            gte: new Date(new Date().setMonth(new Date().getMonth() - 12)),
+          },
+        },
+        select: { createdAt: true, status: true, type: true, category: true },
+      }),
+
+      // Users over time — last 12 months
+      prisma.user.findMany({
+        where: {
+          createdAt: {
+            gte: new Date(new Date().setMonth(new Date().getMonth() - 12)),
+          },
+        },
+        select: { createdAt: true, role: true },
+      }),
+
+      // Professionals count by status
+      (prisma as any).professional.groupBy({
+        by: ["status"],
+        _count: { status: true },
+      }),
+
+      // Material listings count by status
+      (prisma as any).materialListing.groupBy({
+        by: ["status"],
+        _count: { status: true },
+      }),
+
+      // Saved listings count
+      prisma.savedListing.count(),
+
+      // KYC stats
+      (prisma as any).kycVerification.groupBy({
+        by: ["status"],
+        _count: { status: true },
+      }),
+
+      // Payments stats (total by status and type)
+      (prisma as any).payment.groupBy({
+        by: ["status", "type"],
+        _count: { status: true },
+        _sum: { amount: true },
+      }),
+
+      // Enquiries count
+      (prisma as any).enquiry.count(),
     ]);
 
     const stats = {
@@ -52,6 +111,25 @@ export async function GET(request: NextRequest) {
       listingsByStatus: listingsByStatus.map((l: any) => ({ status: l.status, count: l._count.status })),
       pendingReports,
       recentAuditLogs,
+      listingsRaw,
+      usersRaw,
+      professionalsByStatus: professionalsByStatus.map((p: any) => ({
+        status: p.status,
+        count: p._count.status,
+      })),
+      materialListingsByStatus: materialListingsByStatus.map((m: any) => ({
+        status: m.status,
+        count: m._count.status,
+      })),
+      savedListingsCount,
+      kycByStatus: kycByStatus.map((k: any) => ({ status: k.status, count: k._count.status })),
+      paymentsByStatusType: paymentsByStatusType.map((p: any) => ({
+        status: p.status,
+        type: p.type,
+        count: p._count.status,
+        totalAmount: p._sum.amount ?? 0,
+      })),
+      enquiriesCount,
     };
 
     await redis.set(CACHE_KEY, stats, { ex: CACHE_TTL });
