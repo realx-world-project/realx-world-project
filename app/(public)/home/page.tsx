@@ -90,10 +90,18 @@ export default async function HomePage() {
       <section className="bg-gradient-to-br from-black to-gray-900 py-16 sm:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="mb-4 text-3xl font-bold text-[#D4AF37] sm:text-5xl">
-            Find Your Perfect Property in Nigeria
+            Welcome to RealX World
           </h1>
-          <p className="mx-auto mb-8 max-w-2xl text-base text-gray-300 sm:text-lg">
-            Browse verified listings from trusted agents and sellers
+          <p className="mx-auto mb-4 max-w-2xl text-lg font-medium text-white sm:text-xl">
+            A Real Estate Open Market with Limitless Opportunities
+          </p>
+          <p className="mx-auto mb-8 max-w-3xl text-sm text-gray-400 sm:text-base">
+            We are happy to have you join our community of Real Estate enthusiasts with a
+            variety of interests in the Real Estate market across the globe. RealX stands for
+            Realty Exchange. RealX World offers a limitless open market of opportunities to
+            transact genuinely without restrictions all across the globe, where cutting-edge
+            technology, blended with professionalism and expertise, serves you a menu of
+            limitless investment opportunities in the Real Estate market.
           </p>
 
           <div className="mx-auto mb-8 max-w-2xl rounded-xl bg-white p-3 shadow-lg">
