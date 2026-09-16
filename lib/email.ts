@@ -447,6 +447,35 @@ export function materialListingRejectedEmail(title: string): string {
 
 // ─── Join Us notifications ──────────────────────────────────────────────────
 
+export function sellerUpgradeApprovedEmail(name: string): string {
+  return notificationEmail({
+    heading: "Your Seller Account Has Been Activated! 🎉",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Hello ${name}, your request to become a Seller on RealX World has been approved.
+        You can now list properties on the platform.
+      </p>
+    `,
+    ctaLabel: "Start Listing",
+    ctaUrl: "https://www.realxworld.net/dashboard/listings/new",
+  });
+}
+
+export function sellerUpgradeRejectedEmail(name: string, reason?: string): string {
+  return notificationEmail({
+    heading: "Update on Your Seller Request",
+    bodyHtml: `
+      <p style="margin:0 0 24px 0;color:#4A5568;font-size:16px;line-height:1.7;">
+        Hello ${name}, unfortunately your request to become a Seller was not approved at
+        this time.
+      </p>
+      ${reason ? reasonBox(reason) : ""}
+    `,
+    ctaLabel: "View My Account",
+    ctaUrl: "https://www.realxworld.net/dashboard/settings",
+  });
+}
+
 export function joinUsConfirmationEmail(fullName: string): string {
   return notificationEmail({
     heading: "We Received Your Application",
