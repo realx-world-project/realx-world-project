@@ -1,6 +1,18 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Constructed lazily (not at module load) so importing this file never
+// throws in environments where RESEND_API_KEY isn't set yet — the Resend
+// SDK validates its key at construction time, and this module is imported
+// by most admin API routes, which would otherwise fail Next's build-time
+// page-data collection step.
+let resend: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 export async function sendEmail({
   to,
@@ -11,7 +23,7 @@ export async function sendEmail({
   subject: string;
   html: string;
 }) {
-  return resend.emails.send({
+  return getResendClient().emails.send({
     from: "RealX World <no-reply@realxworld.net>",
     to,
     subject,
