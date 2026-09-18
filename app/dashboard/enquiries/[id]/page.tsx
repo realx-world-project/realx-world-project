@@ -93,7 +93,14 @@ export default async function DashboardEnquiryDetailPage({ params }: EnquiryDeta
         </div>
       </div>
 
-      <EnquiryThread enquiryId={enquiry.id} currentUserId={userId} initialMessages={initialMessages} />
+      <EnquiryThread
+        enquiryId={enquiry.id}
+        currentUserId={userId}
+        currentUserName={session.user.name ?? session.user.email ?? "You"}
+        buyerId={enquiry.buyerId}
+        sellerId={enquiry.listing.userId}
+        initialMessages={initialMessages}
+      />
     </div>
   );
 }

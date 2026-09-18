@@ -18,10 +18,36 @@ export interface ThreadMessage {
 interface EnquiryThreadProps {
   enquiryId: string;
   currentUserId: string;
+  currentUserName: string;
+  buyerId: string;
+  sellerId: string;
   initialMessages: ThreadMessage[];
 }
 
-export function EnquiryThread({ enquiryId, currentUserId, initialMessages }: EnquiryThreadProps) {
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// The sender's role is derived from the enquiry's buyer/listing-owner ids,
+// not the User.role field — a listing owner is always "Seller" in this
+// thread regardless of their platform-wide role.
+function getRoleSuffix(senderId: string, buyerId: string, sellerId: string): string {
+  if (senderId === buyerId) return "Buyer";
+  if (senderId === sellerId) return "Seller";
+  return "";
+}
+
+export function EnquiryThread({
+  enquiryId,
+  currentUserId,
+  currentUserName,
+  buyerId,
+  sellerId,
+  initialMessages,
+}: EnquiryThreadProps) {
   const [messages, setMessages] = useState<ThreadMessage[]>(initialMessages);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
@@ -39,7 +65,7 @@ export function EnquiryThread({ enquiryId, currentUserId, initialMessages }: Enq
       message: trimmed,
       createdAt: new Date().toISOString(),
       senderId: currentUserId,
-      senderName: "You",
+      senderName: currentUserName,
     };
     setMessages((prev) => [...prev, optimisticMessage]);
     setReply("");
@@ -56,7 +82,13 @@ export function EnquiryThread({ enquiryId, currentUserId, initialMessages }: Enq
       setMessages((prev) =>
         prev.map((m) =>
           m.id === optimisticMessage.id
-            ? { id: data.id, message: data.message, createdAt: data.createdAt, senderId: data.senderId, senderName: "You" }
+            ? {
+                id: data.id,
+                message: data.message,
+                createdAt: data.createdAt,
+                senderId: data.senderId,
+                senderName: currentUserName,
+              }
             : m
         )
       );
@@ -71,23 +103,37 @@ export function EnquiryThread({ enquiryId, currentUserId, initialMessages }: Enq
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3 rounded-lg border p-4">
+      <div className="space-y-4 rounded-lg border p-4">
         {messages.map((m) => {
           const isMine = m.senderId === currentUserId;
+          const roleSuffix = getRoleSuffix(m.senderId, buyerId, sellerId);
+          const label = isMine ? "You" : roleSuffix ? `${m.senderName} · ${roleSuffix}` : m.senderName;
+          const initials = isMine ? getInitials(currentUserName) : getInitials(m.senderName);
+
           return (
-            <div key={m.id} className={cn("flex flex-col", isMine ? "items-end" : "items-start")}>
+            <div key={m.id} className={cn("flex items-end gap-2", isMine ? "flex-row-reverse" : "flex-row")}>
               <div
                 className={cn(
-                  "max-w-[80%] rounded-lg px-4 py-2 text-sm",
-                  isMine ? "bg-[#D4AF37] text-white" : "bg-gray-100 text-black"
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                  isMine ? "bg-[#D4AF37] text-black" : "bg-gray-200 text-black"
                 )}
+                aria-hidden
               >
-                {!isMine && <p className="mb-1 text-xs font-semibold opacity-80">{m.senderName}</p>}
-                <p className="whitespace-pre-wrap">{m.message}</p>
+                {initials}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {isMine ? "You" : m.senderName} · {format(new Date(m.createdAt), "MMM d, h:mm a")}
-              </p>
+              <div className={cn("flex max-w-[75%] flex-col", isMine ? "items-end" : "items-start")}>
+                <div
+                  className={cn(
+                    "rounded-lg px-4 py-2 text-sm",
+                    isMine ? "bg-[#D4AF37] text-white" : "bg-gray-100 text-black"
+                  )}
+                >
+                  <p className="whitespace-pre-wrap">{m.message}</p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {label} · {format(new Date(m.createdAt), "MMM d, h:mm a")}
+                </p>
+              </div>
             </div>
           );
         })}
