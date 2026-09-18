@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Filter, XCircle } from "lucide-react";
+import { Search, Filter, XCircle, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  getRecentSearches,
+  addRecentSearch,
+  clearRecentSearches,
+  type RecentSearch,
+} from "@/lib/recent-searches";
+import { SaveSearchButton, type SavedSearchFilters } from "@/components/listings/SaveSearchButton";
 
 // ── Option tables ──────────────────────────────────────────────────────────
 
@@ -93,6 +100,79 @@ function filtersToParams(f: Filters): URLSearchParams {
     if (max) p.set("priceMax", max);
   }
   return p;
+}
+
+function buildHref(f: Filters): string {
+  const qs = filtersToParams(f).toString();
+  return qs ? `/listings?${qs}` : "/listings";
+}
+
+function buildSearchLabel(f: Filters): string {
+  const parts: string[] = [];
+  if (f.query) parts.push(f.query);
+  if (f.state !== "all") parts.push(getStateLabel(f.state));
+  if (f.category !== "all") parts.push(getLabel(CATEGORY_OPTIONS, f.category));
+  if (f.type !== "all") parts.push(getLabel(TYPE_OPTIONS, f.type));
+  if (f.price !== "any") parts.push(getLabel(PRICE_OPTIONS, f.price));
+  return parts.length > 0 ? parts.join(" • ") : "All Properties";
+}
+
+function toSavedSearchFilters(f: Filters): SavedSearchFilters {
+  const [priceMin, priceMax] = f.price !== "any" ? f.price.split("-") : ["", ""];
+  return {
+    type: f.type !== "all" ? f.type : undefined,
+    category: f.category !== "all" ? f.category : undefined,
+    state: f.state !== "all" ? f.state : undefined,
+    priceMin: priceMin || undefined,
+    priceMax: priceMax || undefined,
+  };
+}
+
+// ── Recent searches dropdown ────────────────────────────────────────────────
+
+interface RecentSearchesDropdownProps {
+  show: boolean;
+  searches: RecentSearch[];
+  onSelect: (search: RecentSearch) => void;
+  onClear: () => void;
+}
+
+function RecentSearchesDropdown({ show, searches, onSelect, onClear }: RecentSearchesDropdownProps) {
+  if (!show || searches.length === 0) return null;
+
+  return (
+    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-[280px] overflow-y-auto rounded-lg border bg-white shadow-lg">
+      <div className="flex items-center justify-between px-3 py-2">
+        <span className="text-xs font-medium text-gray-500">Recent Searches</span>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onClear}
+          className="text-xs text-[#D4AF37] hover:underline"
+        >
+          Clear
+        </button>
+      </div>
+      <ul>
+        {searches.map((s) => (
+          <li key={s.href}>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onSelect(s)}
+              className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+            >
+              <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
+              <div className="min-w-0">
+                <p className="truncate">{s.label}</p>
+                {s.query && <p className="truncate text-xs text-gray-400">{s.query}</p>}
+              </div>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 // ── FilterControls — module-level component (never defined inside a render) ─
@@ -194,6 +274,17 @@ function FilterControls({
           </Button>
         )}
       </div>
+
+      {/* Save search — bottom of the mobile filter sheet */}
+      {hasActiveFilters && (
+        <SaveSearchButton
+          href={buildHref(filters)}
+          query={filters.query}
+          filters={toSavedSearchFilters(filters)}
+          defaultName={buildSearchLabel(filters)}
+          className="w-full"
+        />
+      )}
     </div>
   );
 }
@@ -204,6 +295,7 @@ export function SearchBar() {
   const router = useRouter();
   const sp = useSearchParams();
   const [isHydrated, setIsHydrated] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [filters, setFilters] = useState<Filters>({
     query: "",
@@ -212,6 +304,9 @@ export function SearchBar() {
     state: "all",
     price: "any",
   });
+
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+  const [showRecent, setShowRecent] = useState(false);
 
   // Sync with URL params after hydration
   useEffect(() => {
@@ -229,14 +324,50 @@ export function SearchBar() {
     setIsHydrated(true);
   }, [sp]);
 
+  useEffect(() => {
+    setRecentSearches(getRecentSearches());
+  }, []);
+
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const setFilter = (key: keyof Filters, v: string) =>
     setFilters((prev) => ({ ...prev, [key]: v }));
 
+  const handleInputFocus = () => {
+    if (recentSearches.length > 0) setShowRecent(true);
+  };
+
+  const handleInputBlur = () => {
+    setTimeout(() => setShowRecent(false), 200);
+  };
+
+  const handleSelectRecent = (recent: RecentSearch) => {
+    setShowRecent(false);
+    router.push(recent.href);
+  };
+
+  const handleClearRecent = () => {
+    clearRecentSearches();
+    setRecentSearches([]);
+  };
+
   const search = () => {
-    const qs = filtersToParams(filters).toString();
-    router.push(qs ? `/listings?${qs}` : "/listings");
+    const href = buildHref(filters);
+
+    if (filters.query || hasActiveFilters) {
+      const recent: RecentSearch = {
+        query: filters.query,
+        filters: toSavedSearchFilters(filters),
+        label: buildSearchLabel(filters),
+        href,
+        timestamp: Date.now(),
+      };
+      addRecentSearch(recent);
+      setRecentSearches(getRecentSearches());
+    }
+
+    setShowRecent(false);
+    router.push(href);
     setMobileOpen(false);
   };
 
@@ -261,11 +392,20 @@ export function SearchBar() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder="Search properties by title or location…"
               value={filters.query}
               onChange={(e) => setFilter("query", e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && search()}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
               className="pl-10"
+            />
+            <RecentSearchesDropdown
+              show={showRecent}
+              searches={recentSearches}
+              onSelect={handleSelectRecent}
+              onClear={handleClearRecent}
             />
           </div>
           <Button onClick={search}>Search</Button>
@@ -331,6 +471,15 @@ export function SearchBar() {
               Clear filters
             </Button>
           )}
+
+          {hasActiveFilters && (
+            <SaveSearchButton
+              href={buildHref(filters)}
+              query={filters.query}
+              filters={toSavedSearchFilters(filters)}
+              defaultName={buildSearchLabel(filters)}
+            />
+          )}
         </div>
       </div>
 
@@ -343,7 +492,15 @@ export function SearchBar() {
             value={filters.query}
             onChange={(e) => setFilter("query", e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && search()}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             className="pl-10"
+          />
+          <RecentSearchesDropdown
+            show={showRecent}
+            searches={recentSearches}
+            onSelect={handleSelectRecent}
+            onClear={handleClearRecent}
           />
         </div>
 

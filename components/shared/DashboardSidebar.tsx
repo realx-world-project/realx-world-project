@@ -13,6 +13,7 @@ const baseLinks = [
   { href: "/dashboard/profile", label: "Profile" },
   { href: "/dashboard/enquiries", label: "Enquiries" },
   { href: "/dashboard/saved", label: "Saved Listings" },
+  { href: "/dashboard/saved-searches", label: "Saved Searches" },
   { href: "/dashboard/vendor", label: "Vendor Dashboard" },
   { href: "/dashboard/settings", label: "Settings" },
 ];

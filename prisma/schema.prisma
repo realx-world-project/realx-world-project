@@ -70,6 +70,7 @@ model User {
   enquiries       Enquiry[]
   enquiryMessages EnquiryMessage[]
   upgradeRequest  RoleUpgradeRequest?
+  savedSearches   SavedSearch[]
 
   @@map("users")
 }
@@ -449,6 +450,18 @@ model EnquiryMessage {
   enquiry     Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
   sender      User     @relation(fields: [senderId], references: [id])
   @@map("enquiry_messages")
+}
+
+model SavedSearch {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  query       String?
+  filters     Json
+  href        String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("saved_searches")
 }
 
 enum UpgradeRequestStatus {
