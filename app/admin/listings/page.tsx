@@ -47,9 +47,9 @@ function mapRow(raw: any): AdminListingRow {
     state: raw.location?.state || "",
     sellerName: raw.user?.name || "",
     sellerEmail: raw.user?.email || "",
-    category: raw.category,
+    category: raw.category as string,
     price: raw.price,
-    status: raw.status,
+    status: raw.status as string,
     imageUrl: raw.images?.[0]?.url ?? null,
     createdAt: raw.createdAt,
   };
