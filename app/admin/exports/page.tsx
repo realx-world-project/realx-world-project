@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, FileText, FileSpreadsheet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,14 @@ import { useToast } from "@/components/ui/use-toast";
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type ExportStatus = "PENDING" | "PROCESSING" | "DONE" | "FAILED";
-type ExportType = "LISTINGS_CSV" | "LISTINGS_EXCEL" | "USERS_CSV";
+type ExportType =
+  | "LISTINGS_CSV"
+  | "LISTINGS_EXCEL"
+  | "USERS_CSV"
+  | "PROFESSIONALS_CSV"
+  | "VENDORS_CSV"
+  | "ENQUIRIES_CSV"
+  | "PAYMENTS_CSV";
 
 interface ExportEntry {
   id: string;
@@ -28,12 +35,37 @@ interface ExportEntry {
   requestedAt: string;
   completedAt?: string | null;
   fileUrl?: string | null;
+  fileSize?: number | null;
 }
 
+const EXPORT_TYPE_OPTIONS: { value: ExportType; label: string }[] = [
+  { value: "LISTINGS_CSV", label: "Listings — CSV" },
+  { value: "LISTINGS_EXCEL", label: "Listings — Excel" },
+  { value: "USERS_CSV", label: "Users — CSV" },
+  { value: "PROFESSIONALS_CSV", label: "Professionals — CSV" },
+  { value: "VENDORS_CSV", label: "Vendors — CSV" },
+  { value: "ENQUIRIES_CSV", label: "Enquiries — CSV" },
+  { value: "PAYMENTS_CSV", label: "Payments — CSV" },
+];
+
 const exportTypeLabels: Record<ExportType, string> = {
-  LISTINGS_CSV: "Listings CSV",
-  LISTINGS_EXCEL: "Listings Excel",
-  USERS_CSV: "Users CSV",
+  LISTINGS_CSV: "Listings — CSV",
+  LISTINGS_EXCEL: "Listings — Excel",
+  USERS_CSV: "Users — CSV",
+  PROFESSIONALS_CSV: "Professionals — CSV",
+  VENDORS_CSV: "Vendors — CSV",
+  ENQUIRIES_CSV: "Enquiries — CSV",
+  PAYMENTS_CSV: "Payments — CSV",
+};
+
+const exportTypeIcons: Record<ExportType, typeof FileText> = {
+  LISTINGS_CSV: FileText,
+  LISTINGS_EXCEL: FileSpreadsheet,
+  USERS_CSV: FileText,
+  PROFESSIONALS_CSV: FileText,
+  VENDORS_CSV: FileText,
+  ENQUIRIES_CSV: FileText,
+  PAYMENTS_CSV: FileText,
 };
 
 const statusVariants: Record<ExportStatus, "warning" | "default" | "success" | "destructive"> = {
@@ -42,6 +74,13 @@ const statusVariants: Record<ExportStatus, "warning" | "default" | "success" | "
   DONE: "success",
   FAILED: "destructive",
 };
+
+function formatFileSize(bytes?: number | null): string | null {
+  if (!bytes) return null;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
@@ -68,6 +107,7 @@ export default function AdminExportsPage() {
               requestedAt: e.createdAt,
               completedAt: e.completedAt ?? null,
               fileUrl: e.fileUrl ?? null,
+              fileSize: e.fileSize ?? null,
             }))
           );
         }
@@ -101,6 +141,7 @@ export default function AdminExportsPage() {
             status: data.status,
             completedAt: data.completedAt ?? null,
             fileUrl: data.fileUrl ?? null,
+            fileSize: data.fileSize ?? null,
           };
           setHistory((prev) =>
             prev.map((e) => (e.id === entry.id ? { ...e, ...updated } : e))
@@ -137,6 +178,7 @@ export default function AdminExportsPage() {
         requestedAt: new Date().toISOString(),
         completedAt: null,
         fileUrl: null,
+        fileSize: null,
       };
       setHistory((prev) => [newEntry, ...prev]);
       toast({ title: "Export queued", description: `Export ID: ${data.exportId}` });
@@ -174,9 +216,9 @@ export default function AdminExportsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="LISTINGS_CSV">Listings CSV</SelectItem>
-                <SelectItem value="LISTINGS_EXCEL">Listings Excel</SelectItem>
-                <SelectItem value="USERS_CSV">Users CSV</SelectItem>
+                {EXPORT_TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -208,84 +250,101 @@ export default function AdminExportsPage() {
                   <TableRow>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Size</TableHead>
                     <TableHead>Requested</TableHead>
                     <TableHead>Completed</TableHead>
                     <TableHead>Download</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {history.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-medium">
-                        {exportTypeLabels[entry.type] ?? entry.type}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {(entry.status === "PENDING" || entry.status === "PROCESSING") && (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  {history.map((entry) => {
+                    const TypeIcon = exportTypeIcons[entry.type] ?? FileText;
+                    const size = formatFileSize(entry.fileSize);
+                    return (
+                      <TableRow key={entry.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <TypeIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            {exportTypeLabels[entry.type] ?? entry.type}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {(entry.status === "PENDING" || entry.status === "PROCESSING") && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
+                            <Badge variant={statusVariants[entry.status]}>
+                              {entry.status}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{size ?? "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(entry.requestedAt), "MMM d, yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {entry.completedAt
+                            ? format(new Date(entry.completedAt), "MMM d, yyyy HH:mm")
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {entry.status === "DONE" && entry.fileUrl ? (
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
+                                <Download className="mr-2 h-3.5 w-3.5" />
+                                Download
+                              </a>
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
                           )}
-                          <Badge variant={statusVariants[entry.status]}>
-                            {entry.status}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(entry.requestedAt), "MMM d, yyyy HH:mm")}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {entry.completedAt
-                          ? format(new Date(entry.completedAt), "MMM d, yyyy HH:mm")
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {entry.status === "DONE" && entry.fileUrl ? (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={entry.fileUrl} download>
-                              <Download className="mr-2 h-3.5 w-3.5" />
-                              Download
-                            </a>
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
 
             {/* Mobile cards */}
             <div className="space-y-3 md:hidden">
-              {history.map((entry) => (
-                <div key={entry.id} className="space-y-2 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">{exportTypeLabels[entry.type] ?? entry.type}</p>
-                    <div className="flex items-center gap-2">
-                      {(entry.status === "PENDING" || entry.status === "PROCESSING") && (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                      )}
-                      <Badge variant={statusVariants[entry.status]}>{entry.status}</Badge>
+              {history.map((entry) => {
+                const TypeIcon = exportTypeIcons[entry.type] ?? FileText;
+                const size = formatFileSize(entry.fileSize);
+                return (
+                  <div key={entry.id} className="space-y-2 rounded-lg border p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="flex items-center gap-2 font-medium">
+                        <TypeIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        {exportTypeLabels[entry.type] ?? entry.type}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {(entry.status === "PENDING" || entry.status === "PROCESSING") && (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        )}
+                        <Badge variant={statusVariants[entry.status]}>{entry.status}</Badge>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Requested {format(new Date(entry.requestedAt), "MMM d, yyyy HH:mm")}
-                  </p>
-                  {entry.completedAt && (
                     <p className="text-xs text-muted-foreground">
-                      Completed {format(new Date(entry.completedAt), "MMM d, yyyy HH:mm")}
+                      Requested {format(new Date(entry.requestedAt), "MMM d, yyyy HH:mm")}
                     </p>
-                  )}
-                  {entry.status === "DONE" && entry.fileUrl && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={entry.fileUrl} download>
-                        <Download className="mr-2 h-3.5 w-3.5" />
-                        Download
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              ))}
+                    {entry.completedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Completed {format(new Date(entry.completedAt), "MMM d, yyyy HH:mm")}
+                        {size ? ` · ${size}` : ""}
+                      </p>
+                    )}
+                    {entry.status === "DONE" && entry.fileUrl && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="mr-2 h-3.5 w-3.5" />
+                          Download
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

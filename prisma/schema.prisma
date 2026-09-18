@@ -176,6 +176,7 @@ model Export {
   type        String
   status      ExportStatus @default(PENDING)
   fileUrl     String?
+  fileSize    Int?
   createdAt   DateTime     @default(now())
   completedAt DateTime?
 

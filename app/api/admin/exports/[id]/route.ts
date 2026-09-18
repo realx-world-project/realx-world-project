@@ -18,6 +18,7 @@ export async function GET(
       type: true,
       status: true,
       fileUrl: true,
+      fileSize: true,
       createdAt: true,
       completedAt: true,
     },

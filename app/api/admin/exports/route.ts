@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { rateLimitByIP } from "@/lib/rateLimit";
 import { generateExport } from "@/lib/jobs/exportJob";
 
 const exportSchema = z.object({
-  type: z.enum(["LISTINGS_CSV", "LISTINGS_EXCEL", "USERS_CSV"]),
+  type: z.enum([
+    "LISTINGS_CSV",
+    "LISTINGS_EXCEL",
+    "USERS_CSV",
+    "PROFESSIONALS_CSV",
+    "VENDORS_CSV",
+    "ENQUIRIES_CSV",
+    "PAYMENTS_CSV",
+  ]),
 });
 
 export async function GET(_request: NextRequest) {
@@ -26,6 +35,7 @@ export async function GET(_request: NextRequest) {
       type: true,
       status: true,
       fileUrl: true,
+      fileSize: true,
       createdAt: true,
       completedAt: true,
     },
@@ -62,8 +72,10 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // Fire-and-forget: do not await
-  generateExport(record.id, parsed.data.type, adminId);
+  // Keeps the export running after the response is sent, even on Vercel's
+  // serverless runtime where the function would otherwise be frozen/killed
+  // as soon as this handler returns.
+  waitUntil(generateExport(record.id, parsed.data.type, adminId));
 
   return NextResponse.json({ exportId: record.id, status: "PENDING" }, { status: 202 });
 }
