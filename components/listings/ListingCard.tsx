@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { MapPin, Bookmark, Home } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CompareButton } from "@/components/listings/CompareButton";
 import { cn } from "@/lib/utils";
 
 export interface Listing {
@@ -150,6 +151,11 @@ export function ListingCard({
           </CardFooter>
         </Card>
       </Link>
+
+      {/* Compare button sits outside <Link> to avoid nested interactive elements */}
+      <div className="px-4 pb-4">
+        <CompareButton listingId={listing.id} className="w-full" />
+      </div>
 
       {/* Bookmark button sits outside <Link> to avoid nested interactive elements */}
       {isAuthenticated && (

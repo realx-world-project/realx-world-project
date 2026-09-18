@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ComparisonTray } from "@/components/listings/ComparisonTray";
 
 export default function PublicLayout({
   children,
@@ -14,6 +15,7 @@ export default function PublicLayout({
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
       <Footer />
+      <ComparisonTray />
     </div>
   );
 }

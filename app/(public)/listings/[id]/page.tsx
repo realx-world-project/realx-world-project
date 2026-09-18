@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ImageGallery } from "@/components/listings/ImageGallery";
 import { BookmarkToggle } from "@/components/listings/BookmarkToggle";
+import { CompareButton } from "@/components/listings/CompareButton";
 import { ReportDialog } from "@/components/listings/ReportDialog";
 import { EnquiryButton } from "@/components/listings/EnquiryButton";
 import { auth } from "@/lib/auth";
@@ -248,6 +249,8 @@ export default async function ListingDetailPage({
               isSaved={false}
               showLabel
             />
+
+            <CompareButton listingId={listing.id} className="w-full" />
 
             <ReportDialog listingId={listing.id} listingTitle={listing.title} />
 
