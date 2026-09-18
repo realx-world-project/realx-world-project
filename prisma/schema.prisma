@@ -68,6 +68,7 @@ model User {
   escrowsAsBuyer  Escrow[]  @relation("EscrowBuyer")
   escrowsAsSeller Escrow[]  @relation("EscrowSeller")
   enquiries       Enquiry[]
+  enquiryMessages EnquiryMessage[]
   upgradeRequest  RoleUpgradeRequest?
 
   @@map("users")
@@ -426,11 +427,28 @@ model Enquiry {
   paymentId       String?       @unique
   isPaid          Boolean       @default(false)
   message         String?
+  isReadBySeller  Boolean       @default(false)
+  isReadByBuyer   Boolean       @default(false)
+  sellerReply     String?
+  repliedAt       DateTime?
   createdAt       DateTime      @default(now())
   buyer           User          @relation(fields: [buyerId], references: [id])
   listing         Listing       @relation(fields: [listingId], references: [id])
   payment         Payment?      @relation(fields: [paymentId], references: [id])
+  messages        EnquiryMessage[]
   @@map("enquiries")
+}
+
+model EnquiryMessage {
+  id          String   @id @default(cuid())
+  enquiryId   String
+  senderId    String
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  enquiry     Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  sender      User     @relation(fields: [senderId], references: [id])
+  @@map("enquiry_messages")
 }
 
 enum UpgradeRequestStatus {

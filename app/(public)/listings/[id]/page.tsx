@@ -10,6 +10,7 @@ import { BookmarkToggle } from "@/components/listings/BookmarkToggle";
 import { CompareButton } from "@/components/listings/CompareButton";
 import { ReportDialog } from "@/components/listings/ReportDialog";
 import { EnquiryButton } from "@/components/listings/EnquiryButton";
+import { EnquiryForm } from "@/components/listings/EnquiryForm";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Listing } from "@/components/listings/ListingCard";
@@ -260,6 +261,17 @@ export default async function ListingDetailPage({
               sellerEmail={listing.sellerEmail}
               paymentsEnabled={false}
             />
+
+            {listing.status === "PUBLISHED" && (
+              <>
+                <Separator />
+                <EnquiryForm
+                  listingId={listing.id}
+                  listingTitle={listing.title}
+                  isLoggedIn={isAuthenticated}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>

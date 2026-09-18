@@ -12,6 +12,7 @@ const links = [
   { href: "/admin/dashboard", label: "Overview" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/listings", label: "Listings", badge: "0" },
+  { href: "/admin/enquiries", label: "Enquiries" },
   { href: "/admin/materials", label: "Materials" },
   { href: "/admin/vendors", label: "Vendors" },
   { href: "/admin/kyc", label: "KYC" },
