@@ -22,6 +22,8 @@ import {
   type AdminListingRow,
 } from "./listing-client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Listing Moderation | RealX Admin",
 };
@@ -85,7 +87,10 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
       listings = (data.listings ?? []).map(mapRow);
       totalPages = data.totalPages ?? 1;
     }
-  } catch {}
+  } catch (err) {
+    console.error("[admin/listings] render error:", err);
+    throw err; // re-throw so the error boundary still catches it
+  }
 
   const pageHref = (n: number) => {
     const qs = new URLSearchParams({ page: String(n) });
