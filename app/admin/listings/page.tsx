@@ -80,7 +80,7 @@ export default async function AdminListingsPage() {
     const res = await fetch(
       `${process.env.NEXTAUTH_URL}/api/admin/listings`,
       {
-        headers: { Cookie: "" },
+        headers: { Cookie: cookies().toString() },
         cache: "no-store",
       }
     );
