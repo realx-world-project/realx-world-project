@@ -1,5 +1,4 @@
 import { auth } from "@/lib/auth";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Metadata } from "next";
@@ -10,7 +9,6 @@ import {
   Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow,
 } from "@/components/ui/table";
-import { TableSkeleton } from "@/components/admin/TableSkeleton";
 import {
   Pagination, PaginationContent, PaginationItem,
   PaginationLink, PaginationNext, PaginationPrevious,
@@ -21,6 +19,31 @@ import {
   listingStatusVariants,
   type AdminListingRow,
 } from "./listing-client";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Listing Moderation | RealX Admin",
+};
+
+const PAGE_SIZE = 20;
+const VALID_STATUSES = ["PENDING", "APPROVED", "REJECTED", "PUBLISHED"];
+const VALID_CATEGORIES = ["RESIDENTIAL", "COMMERCIAL", "LAND"];
+
+interface SearchParams {
+  status?: string;
+  category?: string;
+  q?: string;
+  page?: string;
+}
+
+interface AdminListingsPageProps {
+  searchParams: Promise<SearchParams>;
+}
+
+const formatPrice = (n: number) =>
+  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n);
 
 function safeFormat(date: string | Date | null | undefined, fmt: string): string {
   try {
@@ -33,71 +56,78 @@ function safeFormat(date: string | Date | null | undefined, fmt: string): string
   }
 }
 
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "Listing Moderation | RealX Admin",
-};
-
-interface SearchParams {
-  status?: string;
-  category?: string;
-  page?: string;
-}
-
-interface AdminListingsPageProps {
-  searchParams: Promise<SearchParams>;
-}
-
-const formatPrice = (n: number) =>
-  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n);
-
-function mapRow(raw: any): AdminListingRow {
+// Converts a raw Prisma row into the plain-string AdminListingRow shape
+// listing-client.tsx expects — every enum and date is explicitly stringified
+// here so nothing but plain serializable data crosses to the client component.
+function serializeListing(l: any): AdminListingRow {
   return {
-    id: raw.id,
-    title: raw.title,
-    city: raw.location?.city || "",
-    state: raw.location?.state || "",
-    sellerName: raw.user?.name || "",
-    sellerEmail: raw.user?.email || "",
-    category: raw.category as string,
-    price: raw.price,
-    status: raw.status as string,
-    imageUrl: raw.images?.[0]?.url ?? null,
-    createdAt: raw.createdAt,
+    id: l.id,
+    title: l.title,
+    city: l.location?.city ?? "",
+    state: l.location?.state ?? "",
+    sellerName: l.user?.name ?? "Unknown",
+    sellerEmail: l.user?.email ?? "—",
+    category: String(l.category),
+    price: l.price,
+    status: String(l.status),
+    imageUrl: l.images?.[0]?.url ?? null,
+    createdAt: l.createdAt instanceof Date ? l.createdAt.toISOString() : String(l.createdAt ?? ""),
   };
 }
-
-const LISTINGS_HEADERS = ["Listing", "Seller", "Category", "Price", "Status", "Date", "Actions"];
 
 export default async function AdminListingsPage({ searchParams }: AdminListingsPageProps) {
   const session = await auth();
   if (!session || (session.user as any).role !== "ADMIN") redirect("/login");
 
   const params = await searchParams;
-  const statusFilter = params.status ?? "";
-  const categoryFilter = params.category ?? "";
+  const statusFilter = VALID_STATUSES.includes(params.status ?? "") ? params.status! : "";
+  const categoryFilter = VALID_CATEGORIES.includes(params.category ?? "") ? params.category! : "";
+  const search = params.q?.trim() ?? "";
   const page = Math.max(1, Number(params.page ?? 1));
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const cookieStore = cookies();
-  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
-  const opts = { headers: { Cookie: cookieHeader }, cache: "no-store" as const };
+  const whereClause: Record<string, unknown> = {
+    ...(statusFilter && { status: statusFilter }),
+    ...(categoryFilter && { category: categoryFilter }),
+    ...(search && { title: { contains: search, mode: "insensitive" } }),
+  };
 
   let listings: AdminListingRow[] = [];
   let totalPages = 1;
 
   try {
-    const qs = new URLSearchParams({ page: String(page) });
-    if (statusFilter) qs.set("status", statusFilter);
-    if (categoryFilter) qs.set("category", categoryFilter);
+    const db: any = prisma;
+    const [rows, total] = await Promise.all([
+      db.listing.findMany({
+        where: whereClause,
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          price: true,
+          type: true,
+          category: true,
+          status: true,
+          createdAt: true,
+          images: {
+            where: { isPrimary: true },
+            take: 1,
+            select: { url: true },
+          },
+          location: {
+            select: { state: true, city: true, area: true },
+          },
+          user: {
+            select: { name: true, email: true },
+          },
+        },
+      }),
+      db.listing.count({ where: whereClause }),
+    ]);
 
-    const res = await fetch(`${base}/api/admin/listings?${qs}`, opts);
-    if (res.ok) {
-      const data = await res.json();
-      listings = (data.listings ?? []).map(mapRow);
-      totalPages = data.totalPages ?? 1;
-    }
+    listings = rows.map(serializeListing);
+    totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   } catch (err) {
     console.error("[admin/listings] render error:", err);
     throw err; // re-throw so the error boundary still catches it
@@ -107,6 +137,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
     const qs = new URLSearchParams({ page: String(n) });
     if (statusFilter) qs.set("status", statusFilter);
     if (categoryFilter) qs.set("category", categoryFilter);
+    if (search) qs.set("q", search);
     return `/admin/listings?${qs}`;
   };
 
