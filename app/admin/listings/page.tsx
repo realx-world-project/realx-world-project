@@ -22,6 +22,17 @@ import {
   type AdminListingRow,
 } from "./listing-client";
 
+function safeFormat(date: string | Date | null | undefined, fmt: string): string {
+  try {
+    if (!date) return "—";
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "—";
+    return format(d, fmt);
+  } catch {
+    return "—";
+  }
+}
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -166,7 +177,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(listing.createdAt), "MMM d, yyyy")}
+                      {safeFormat(listing.createdAt, "MMM d, yyyy")}
                     </TableCell>
                     <TableCell className="text-right">
                       <ListingActionsCell listing={listing} />
