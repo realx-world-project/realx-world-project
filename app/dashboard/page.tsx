@@ -3,10 +3,15 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ListingCard, type Listing } from "@/components/listings/ListingCard";
-import { Search, Bookmark, Plus, List, User, ArrowRight } from "lucide-react";
+import {
+  Search, Bookmark, Plus, List, User, ArrowRight,
+  CheckCircle2, Clock, XCircle, MessageSquare, TrendingUp, AlertTriangle,
+} from "lucide-react";
 import React from "react";
 import { prisma } from "@/lib/prisma";
+import { cn } from "@/lib/utils";
 
 type QuickCard = {
   icon: React.ComponentType<{ className?: string }>;
@@ -51,6 +56,47 @@ function getRoleBadgeClass(role: string): string {
   }
 }
 
+function StatCard({
+  icon: Icon,
+  iconColor,
+  borderColor,
+  value,
+  valueClassName,
+  label,
+  href,
+  badge,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor: string;
+  borderColor: string;
+  value: React.ReactNode;
+  valueClassName?: string;
+  label: string;
+  href?: string;
+  badge?: React.ReactNode;
+}) {
+  const content = (
+    <Card
+      className={cn(
+        "border-l-4 transition-shadow hover:shadow-md hover:border-[#D4AF37]",
+        borderColor,
+        href && "cursor-pointer"
+      )}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <Icon className={cn("h-5 w-5", iconColor)} />
+          {badge}
+        </div>
+        <p className={cn("mt-2 text-2xl font-bold", valueClassName)}>{value}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
+      </CardContent>
+    </Card>
+  );
+
+  return href ? <Link href={href}>{content}</Link> : content;
+}
+
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
@@ -64,6 +110,12 @@ export default async function DashboardPage() {
   let publishedCount = 0;
   let rejectedCount = 0;
   let savedCount = 0;
+  let enquiriesReceived = 0;
+  let unreadEnquiries = 0;
+  let totalSaves = 0;
+  let totalRevenue = 0;
+  let paymentsCount = 0;
+  let kycStatus = "NOT_SUBMITTED";
   let recentListings: Listing[] = [];
 
   try {
@@ -86,6 +138,24 @@ export default async function DashboardPage() {
       publishedCount = published;
       rejectedCount = rejected;
       recentListings = recent.map(mapListing);
+
+      const [enquiriesTotal, enquiriesUnread, saves, paymentsAgg, userRecord] = await Promise.all([
+        prisma.enquiry.count({ where: { listing: { userId } } }),
+        prisma.enquiry.count({ where: { listing: { userId }, isReadBySeller: false } }),
+        prisma.savedListing.count({ where: { listing: { userId } } }),
+        prisma.payment.aggregate({
+          where: { userId, type: "LISTING_FEE", status: "SUCCESS" },
+          _sum: { amount: true },
+          _count: true,
+        }),
+        prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true } }),
+      ]);
+      enquiriesReceived = enquiriesTotal;
+      unreadEnquiries = enquiriesUnread;
+      totalSaves = saves;
+      totalRevenue = paymentsAgg._sum.amount ?? 0;
+      paymentsCount = paymentsAgg._count;
+      kycStatus = (userRecord as any)?.kycStatus ?? "NOT_SUBMITTED";
     }
 
     savedCount = await prisma.savedListing.count({ where: { userId } });
@@ -95,7 +165,11 @@ export default async function DashboardPage() {
     role === "BUYER"
       ? `You have ${savedCount} saved ${savedCount === 1 ? "property" : "properties"}.`
       : isSeller
-      ? `${pendingCount} pending · ${publishedCount} published · ${rejectedCount} rejected`
+      ? publishedCount === 0 && pendingCount === 0
+        ? "You have no listings yet. Create your first listing to get started."
+        : unreadEnquiries > 0
+        ? `You have ${unreadEnquiries} new ${unreadEnquiries === 1 ? "enquiry" : "enquiries"} waiting for your response.`
+        : `${publishedCount} live · ${pendingCount} pending · ${rejectedCount} rejected`
       : "Welcome to your dashboard.";
 
   const quickCards = isSeller ? sellerCards : buyerCards;
@@ -110,6 +184,88 @@ export default async function DashboardPage() {
         </div>
         <p className="text-sm text-gray-400">{tipText}</p>
       </div>
+
+      {/* KYC reminder — unverified sellers */}
+      {role === "SELLER" && kycStatus !== "VERIFIED" && (
+        <Alert className="border-amber-400 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800">Identity Verification Required</AlertTitle>
+          <AlertDescription className="text-amber-700">
+            You need to verify your identity before you can list properties.
+            <Link href="/dashboard/kyc" className="ml-1 font-semibold underline">
+              Verify now →
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Performance Stats — sellers only */}
+      {isSeller && (
+        <section>
+          <h2 className="mb-4 text-lg font-semibold">Performance</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <StatCard
+              icon={CheckCircle2}
+              iconColor="text-green-600"
+              borderColor="border-l-green-500"
+              value={publishedCount}
+              label="Live Listings"
+              href="/dashboard/listings?status=PUBLISHED"
+            />
+            <StatCard
+              icon={Clock}
+              iconColor="text-amber-600"
+              borderColor="border-l-amber-500"
+              value={pendingCount}
+              label="Pending Review"
+              href="/dashboard/listings?status=PENDING"
+            />
+            <StatCard
+              icon={XCircle}
+              iconColor="text-red-600"
+              borderColor="border-l-red-500"
+              value={rejectedCount}
+              label="Rejected"
+              href="/dashboard/listings?status=REJECTED"
+            />
+            <StatCard
+              icon={MessageSquare}
+              iconColor="text-blue-600"
+              borderColor="border-l-blue-500"
+              value={enquiriesReceived}
+              label="Total Enquiries"
+              href="/dashboard/enquiries"
+              badge={
+                unreadEnquiries > 0 ? (
+                  <Badge className="bg-[#D4AF37] text-black hover:bg-[#D4AF37]">
+                    {unreadEnquiries} new
+                  </Badge>
+                ) : undefined
+              }
+            />
+            <StatCard
+              icon={Bookmark}
+              iconColor="text-purple-600"
+              borderColor="border-l-purple-500"
+              value={totalSaves}
+              label="Times Saved"
+            />
+            <StatCard
+              icon={TrendingUp}
+              iconColor="text-[#D4AF37]"
+              borderColor="border-l-[#D4AF37]"
+              value={
+                publishedCount > 0
+                  ? `${publishedCount} active • ${enquiriesReceived} enquiries • ${totalSaves} saves`
+                  : "No active listings yet"
+              }
+              valueClassName="text-sm font-semibold leading-snug"
+              label="Performance"
+              href="/dashboard/listings"
+            />
+          </div>
+        </section>
+      )}
 
       {/* Quick Actions */}
       <section>
