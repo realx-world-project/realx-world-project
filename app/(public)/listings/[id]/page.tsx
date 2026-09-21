@@ -58,6 +58,8 @@ function mapPrismaListing(raw: any): Listing {
     city: raw.location?.city ?? "",
     state: raw.location?.state ?? "",
     address: raw.location?.address,
+    lat: raw.location?.lat ?? undefined,
+    lng: raw.location?.lng ?? undefined,
     images: (raw.images ?? []).map((img: any) => img.url),
     createdAt: raw.createdAt?.toISOString(),
     phone: raw.user?.phone ?? undefined,
@@ -99,19 +101,56 @@ export async function generateMetadata({
   params,
 }: ListingDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const listing = await getListing(id);
+  const db: any = prisma;
+  const listing = await db.listing.findUnique({
+    where: { id },
+    select: {
+      title: true,
+      description: true,
+      price: true,
+      type: true,
+      category: true,
+      images: { where: { isPrimary: true }, take: 1, select: { url: true } },
+      location: { select: { city: true, state: true } },
+    },
+  });
 
   if (!listing) {
-    return { title: "Property Not Found | RealX World" };
+    return { title: "Listing Not Found — RealX World" };
   }
+
+  const price = formatPrice(listing.price);
+  const typeLabel = typeLabels[listing.type as string] ?? "For Sale";
+  const location = listing.location
+    ? `${listing.location.city}, ${listing.location.state}`
+    : "Nigeria";
+
+  const title = `${listing.title} — ${typeLabel} in ${location} | RealX World`;
 
   const description = listing.description
     ? listing.description.slice(0, 160).replace(/\n/g, " ")
-    : `${typeLabels[listing.type] ?? listing.type} — ${listing.category.toLowerCase()} property in ${listing.city}, ${listing.state}`;
+    : `${listing.title} — ${typeLabel} at ${price} in ${location}. View on RealX World.`;
+
+  const imageUrl = listing.images?.[0]?.url;
 
   return {
-    title: `${listing.title} | RealX World`,
+    title,
     description,
+    openGraph: {
+      title,
+      description,
+      url: `https://www.realxworld.net/listings/${id}`,
+      siteName: "RealX World",
+      images: imageUrl ? [{ url: imageUrl, width: 800, height: 600 }] : [],
+      locale: "en_NG",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: imageUrl ? [imageUrl] : [],
+    },
   };
 }
 
@@ -144,6 +183,46 @@ export default async function ListingDetailPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": listing.type === "SALE" ? "RealEstateListing" : "Offer",
+            name: listing.title,
+            description: listing.description,
+            url: `https://www.realxworld.net/listings/${listing.id}`,
+            image: listing.images?.[0] ?? null,
+            price: listing.price,
+            priceCurrency: "NGN",
+            offers: {
+              "@type": "Offer",
+              price: listing.price,
+              priceCurrency: "NGN",
+              availability: "https://schema.org/InStock",
+              seller: {
+                "@type": "Organization",
+                name: "RealX World",
+                url: "https://www.realxworld.net",
+              },
+            },
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: listing.city,
+              addressRegion: listing.state,
+              addressCountry: "NG",
+            },
+            geo: listing.lat && listing.lng
+              ? {
+                  "@type": "GeoCoordinates",
+                  latitude: listing.lat,
+                  longitude: listing.lng,
+                }
+              : undefined,
+          }),
+        }}
+      />
+
       <Link
         href="/listings"
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"

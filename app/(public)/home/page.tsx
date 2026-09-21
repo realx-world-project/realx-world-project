@@ -117,6 +117,49 @@ export default async function HomePage() {
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebSite",
+                "@id": "https://www.realxworld.net/#website",
+                url: "https://www.realxworld.net",
+                name: "RealX World",
+                description: "A world of varied real estate transactions and exchange",
+                potentialAction: {
+                  "@type": "SearchAction",
+                  target: {
+                    "@type": "EntryPoint",
+                    urlTemplate: "https://www.realxworld.net/listings?q={search_term_string}",
+                  },
+                  "query-input": "required name=search_term_string",
+                },
+              },
+              {
+                "@type": "Organization",
+                "@id": "https://www.realxworld.net/#organization",
+                name: "RealX World",
+                url: "https://www.realxworld.net",
+                logo: "https://www.realxworld.net/logo.png",
+                contactPoint: {
+                  "@type": "ContactPoint",
+                  contactType: "customer service",
+                  email: "info@realxworld.net",
+                },
+                address: {
+                  "@type": "PostalAddress",
+                  addressLocality: "Lagos",
+                  addressCountry: "NG",
+                },
+              },
+            ],
+          }),
+        }}
+      />
+
       {/* Hero */}
       <section className="bg-gradient-to-br from-black to-gray-900 py-16 sm:py-24">
         <div className="container mx-auto px-4 text-center">

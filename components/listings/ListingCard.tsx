@@ -22,6 +22,8 @@ export interface Listing {
   city: string;
   state: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   images: string[];
   createdAt?: string;
   phone?: string;
