@@ -34,7 +34,12 @@ async function uploadToCloudinary(
         overwrite: true,
       },
       (error, result) => {
-        if (error || !result) return reject(error ?? new Error("Upload failed"));
+        if (error || !result) {
+          const msg = error
+            ? `Cloudinary error: ${error.message} (http_code: ${(error as any).http_code})`
+            : "Upload failed: no result";
+          return reject(new Error(msg));
+        }
         resolve({ url: result.secure_url, bytes: result.bytes });
       }
     );
@@ -299,8 +304,8 @@ export async function generateExport(
     console.error("[exportJob] failed:", {
       exportId,
       type,
-      error: err instanceof Error ? err.message : String(err),
-      stack: err instanceof Error ? err.stack : undefined,
+      error: err instanceof Error ? err.message : JSON.stringify(err),
+      stack: err instanceof Error ? err.stack?.split("\n").slice(0, 3).join(" | ") : undefined,
     });
   }
 }
