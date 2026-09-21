@@ -211,12 +211,3 @@ export function AdminListingFilters() {
     </div>
   );
 }
-
-// ── Status badge variants ──────────────────────────────────────────────────
-
-export const listingStatusVariants: Record<string, "warning" | "default" | "success" | "destructive"> = {
-  PENDING: "warning",
-  APPROVED: "default",
-  PUBLISHED: "success",
-  REJECTED: "destructive",
-};

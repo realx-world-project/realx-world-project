@@ -16,9 +16,9 @@ import {
 import {
   AdminListingFilters,
   ListingActionsCell,
-  listingStatusVariants,
   type AdminListingRow,
 } from "./listing-client";
+import { listingStatusVariants, VALID_STATUSES, VALID_CATEGORIES } from "./listing-utils";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +28,6 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE = 20;
-const VALID_STATUSES = ["PENDING", "APPROVED", "REJECTED", "PUBLISHED"];
-const VALID_CATEGORIES = ["RESIDENTIAL", "COMMERCIAL", "LAND"];
 
 interface SearchParams {
   status?: string;
