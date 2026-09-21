@@ -47,6 +47,8 @@ export async function generateExport(
   type: string,
   userId: string
 ): Promise<void> {
+  console.log("[exportJob] starting:", { exportId, type });
+
   await prisma.export.update({
     where: { id: exportId },
     data: { status: "PROCESSING" },
@@ -75,6 +77,7 @@ export async function generateExport(
         },
         orderBy: { createdAt: "desc" },
       });
+      console.log("[exportJob] data fetched, row count:", listings.length);
 
       if (type === "LISTINGS_CSV") {
         const header = rowToCsv([
@@ -143,6 +146,7 @@ export async function generateExport(
         },
         orderBy: { createdAt: "desc" },
       });
+      console.log("[exportJob] data fetched, row count:", users.length);
 
       const header = rowToCsv(["id", "name", "email", "phone", "role", "isVerified", "isActive", "createdAt"]);
       const rows = users.map((u: any) =>
@@ -170,6 +174,7 @@ export async function generateExport(
         },
         orderBy: { createdAt: "desc" },
       });
+      console.log("[exportJob] data fetched, row count:", professionals.length);
 
       const header = rowToCsv([
         "ID", "Name", "Email", "Category", "Company", "Experience (Years)",
@@ -204,6 +209,7 @@ export async function generateExport(
         },
         orderBy: { createdAt: "desc" },
       });
+      console.log("[exportJob] data fetched, row count:", vendors.length);
 
       const header = rowToCsv([
         "ID", "Owner Name", "Owner Email", "Business Name", "Phone",
@@ -233,6 +239,7 @@ export async function generateExport(
         },
         orderBy: { createdAt: "desc" },
       });
+      console.log("[exportJob] data fetched, row count:", enquiries.length);
 
       const header = rowToCsv([
         "ID", "Buyer Name", "Buyer Email", "Listing Title", "Listing Type",
@@ -261,6 +268,7 @@ export async function generateExport(
         },
         orderBy: { createdAt: "desc" },
       });
+      console.log("[exportJob] data fetched, row count:", payments.length);
 
       const header = rowToCsv([
         "ID", "User Name", "User Email", "Payment Type", "Amount (NGN)",
@@ -284,11 +292,15 @@ export async function generateExport(
       data: { status: "DONE", fileUrl, fileSize, completedAt: new Date() },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
     await prisma.export.update({
       where: { id: exportId },
       data: { status: "FAILED", completedAt: new Date() },
     });
-    console.error(`Export ${exportId} failed:`, message);
+    console.error("[exportJob] failed:", {
+      exportId,
+      type,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
   }
 }
