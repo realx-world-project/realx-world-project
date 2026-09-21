@@ -15,9 +15,9 @@ import {
 import {
   AdminUpgradeRequestFilters,
   UpgradeRequestActionsCell,
-  upgradeRequestStatusVariants,
   type AdminUpgradeRequestRow,
 } from "./upgrade-requests-client";
+import { upgradeRequestStatusVariants } from "./upgrade-requests-utils";
 
 export const metadata = {
   title: "Role Upgrade Requests | RealX Admin",

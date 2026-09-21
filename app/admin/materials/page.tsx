@@ -16,9 +16,9 @@ import { materialCategoryLabels } from "@/lib/materials";
 import {
   AdminMaterialFilters,
   MaterialActionsCell,
-  materialStatusVariants,
   type AdminMaterialRow,
 } from "./materials-client";
+import { materialStatusVariants } from "./materials-utils";
 
 interface SearchParams {
   status?: string;

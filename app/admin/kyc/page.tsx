@@ -15,9 +15,9 @@ import {
 import {
   AdminKycFilters,
   KycActionsCell,
-  kycStatusVariants,
   type AdminKycRow,
 } from "./kyc-client";
+import { kycStatusVariants } from "./kyc-utils";
 
 interface SearchParams {
   status?: string;

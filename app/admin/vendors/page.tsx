@@ -15,9 +15,9 @@ import {
 import {
   AdminVendorFilters,
   VendorActionsCell,
-  vendorStatusVariants,
   type AdminVendorRow,
 } from "./vendors-client";
+import { vendorStatusVariants } from "./vendors-utils";
 
 interface SearchParams {
   status?: string;

@@ -17,9 +17,9 @@ import {
 import {
   AdminUserFilters,
   UserActionsCell,
-  roleVariants,
   type AdminUser,
 } from "./user-client";
+import { roleVariants } from "./user-utils";
 
 export const metadata: Metadata = {
   title: "User Management | RealX Admin",

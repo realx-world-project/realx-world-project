@@ -24,13 +24,6 @@ export type AdminMaterialRow = {
   createdAt: string;
 };
 
-export const materialStatusVariants: Record<string, "warning" | "default" | "success" | "destructive"> = {
-  PENDING: "warning",
-  APPROVED: "success",
-  REJECTED: "destructive",
-  SUSPENDED: "destructive",
-};
-
 export function AdminMaterialFilters() {
   const router = useRouter();
   const sp = useSearchParams();

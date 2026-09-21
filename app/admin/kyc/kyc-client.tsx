@@ -31,12 +31,6 @@ export type AdminKycRow = {
   verifiedAt: string | null;
 };
 
-export const kycStatusVariants: Record<string, "warning" | "default" | "success" | "destructive"> = {
-  PENDING: "warning",
-  VERIFIED: "success",
-  FAILED: "destructive",
-};
-
 export function AdminKycFilters() {
   const router = useRouter();
   const sp = useSearchParams();

@@ -31,12 +31,6 @@ export type AdminUpgradeRequestRow = {
   createdAt: string;
 };
 
-export const upgradeRequestStatusVariants: Record<string, "warning" | "default" | "success" | "destructive"> = {
-  PENDING: "warning",
-  APPROVED: "success",
-  REJECTED: "destructive",
-};
-
 export function AdminUpgradeRequestFilters({ pendingCount }: { pendingCount: number }) {
   const router = useRouter();
   const sp = useSearchParams();

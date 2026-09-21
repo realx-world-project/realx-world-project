@@ -283,11 +283,3 @@ export function AdminUserFilters({
     </div>
   );
 }
-
-// ── Role badge variants ────────────────────────────────────────────────────
-
-export const roleVariants: Record<UserRole, "destructive" | "default" | "warning" | "secondary"> = {
-  ADMIN: "destructive",
-  SELLER: "warning",
-  BUYER: "secondary",
-};
