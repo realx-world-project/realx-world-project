@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendEmail, vendorApprovedEmail, vendorRejectedEmail } from "@/lib/email";
+import { sendSmsAsync } from "@/lib/sms";
+import { smsTemplates } from "@/lib/sms-templates";
 
 const bodySchema = z.object({ status: z.enum(["APPROVED", "REJECTED", "SUSPENDED"]) });
 
@@ -38,7 +40,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   const vendorWithUser = await db.materialVendor.findUnique({
     where: { id },
-    include: { user: { select: { email: true } } },
+    include: { user: { select: { email: true, phone: true } } },
   });
 
   if (vendorWithUser?.user?.email) {
@@ -54,6 +56,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         subject: "Update on your vendor application — RealX World",
         html: vendorRejectedEmail(vendorWithUser.businessName),
       }).catch(console.error);
+    }
+  }
+
+  if (vendorWithUser?.user?.phone) {
+    if (parsed.data.status === "APPROVED") {
+      sendSmsAsync({ to: vendorWithUser.user.phone, message: smsTemplates.vendorApproved(vendorWithUser.businessName) });
+    } else if (parsed.data.status === "REJECTED") {
+      sendSmsAsync({ to: vendorWithUser.user.phone, message: smsTemplates.vendorRejected(vendorWithUser.businessName) });
     }
   }
 

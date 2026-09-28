@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
 import { rateLimitByIP } from "@/lib/rateLimit";
 import { sendEmail, welcomeEmail, verificationEmail } from "@/lib/email";
+import { sendSmsAsync } from "@/lib/sms";
+import { smsTemplates } from "@/lib/sms-templates";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -75,6 +77,10 @@ export async function POST(request: NextRequest) {
       subject: "Welcome to RealX World — Your Account is Ready!",
       html: welcomeEmail(parsed.data.name, parsed.data.role ?? "BUYER"),
     }).catch(console.error);
+
+    if (user.phone) {
+      sendSmsAsync({ to: user.phone, message: smsTemplates.welcomeNew(user.name ?? parsed.data.name) });
+    }
 
     return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
   } catch (err) {

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendEmail, sellerUpgradeApprovedEmail, sellerUpgradeRejectedEmail } from "@/lib/email";
+import { sendSmsAsync } from "@/lib/sms";
+import { smsTemplates } from "@/lib/sms-templates";
 
 const bodySchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("APPROVED") }),
@@ -23,7 +25,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const db: any = prisma;
   const existing = await db.roleUpgradeRequest.findUnique({
     where: { id },
-    include: { user: { select: { name: true, email: true } } },
+    include: { user: { select: { name: true, email: true, phone: true } } },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -62,6 +64,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         html: sellerUpgradeApprovedEmail(applicantName),
       }).catch(console.error);
     }
+
+    if (existing.user?.phone) {
+      sendSmsAsync({ to: existing.user.phone, message: smsTemplates.roleUpgradeApproved(applicantName) });
+    }
   } else {
     updated = await db.roleUpgradeRequest.update({
       where: { id },
@@ -84,6 +90,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         subject: "Update on your seller request",
         html: sellerUpgradeRejectedEmail(applicantName, data.adminNote),
       }).catch(console.error);
+    }
+
+    if (existing.user?.phone) {
+      sendSmsAsync({ to: existing.user.phone, message: smsTemplates.roleUpgradeRejected(applicantName) });
     }
   }
 

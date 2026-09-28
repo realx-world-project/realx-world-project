@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
+import { sendSmsAsync } from "@/lib/sms";
+import { smsTemplates } from "@/lib/sms-templates";
 
 const bodySchema = z.object({
   message: z.string().min(1).max(2000),
@@ -24,8 +26,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const enquiry = await db.enquiry.findUnique({
     where: { id: params.id },
     include: {
-      listing: { select: { id: true, title: true, userId: true, user: { select: { email: true } } } },
-      buyer: { select: { id: true, name: true, email: true } },
+      listing: { select: { id: true, title: true, userId: true, user: { select: { email: true, phone: true } } } },
+      buyer: { select: { id: true, name: true, email: true, phone: true } },
     },
   });
 
@@ -75,6 +77,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         `,
       }).catch((err) => console.error("[messages POST] email failed:", err));
     }
+
+    if (enquiry.listing.user?.phone) {
+      sendSmsAsync({ to: enquiry.listing.user.phone, message: smsTemplates.newEnquiry(enquiry.listing.title) });
+    }
   } else {
     await db.enquiry.update({
       where: { id: enquiry.id },
@@ -104,6 +110,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           </div>
         `,
       }).catch((err) => console.error("[messages POST] email failed:", err));
+    }
+
+    if (enquiry.buyer?.phone) {
+      sendSmsAsync({
+        to: enquiry.buyer.phone,
+        message: smsTemplates.enquiryReply(session.user.name ?? "The seller"),
+      });
     }
   }
 

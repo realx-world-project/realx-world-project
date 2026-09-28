@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendEmail, professionalApprovedEmail, professionalRejectedEmail } from "@/lib/email";
+import { sendSmsAsync } from "@/lib/sms";
+import { smsTemplates } from "@/lib/sms-templates";
 
 const bodySchema = z.object({ status: z.enum(["APPROVED", "REJECTED", "SUSPENDED"]) });
 
@@ -33,7 +35,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   const prof = await db.professional.findUnique({
     where: { id },
-    include: { user: { select: { email: true, name: true } } },
+    include: { user: { select: { email: true, name: true, phone: true } } },
   });
 
   if (prof?.user?.email) {
@@ -49,6 +51,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         subject: "Update on your professional profile — RealX World",
         html: professionalRejectedEmail(prof.user.name ?? ""),
       }).catch(console.error);
+    }
+  }
+
+  if (prof?.user?.phone) {
+    if (status === "APPROVED") {
+      sendSmsAsync({ to: prof.user.phone, message: smsTemplates.professionalApproved(prof.user.name ?? "") });
+    } else if (status === "REJECTED") {
+      sendSmsAsync({ to: prof.user.phone, message: smsTemplates.professionalRejected(prof.user.name ?? "") });
     }
   }
 

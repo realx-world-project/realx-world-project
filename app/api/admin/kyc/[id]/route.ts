@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendEmail, kycVerifiedEmail, kycFailedEmail } from "@/lib/email";
+import { sendSmsAsync } from "@/lib/sms";
+import { smsTemplates } from "@/lib/sms-templates";
 
 const bodySchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("VERIFIED") }),
@@ -54,7 +56,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   const kycRecord = await db.kycVerification.findUnique({
     where: { id },
-    include: { user: { select: { email: true, name: true } } },
+    include: { user: { select: { email: true, name: true, phone: true } } },
   });
 
   if (kycRecord?.user?.email) {
@@ -70,6 +72,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         subject: "Identity verification update — RealX World",
         html: kycFailedEmail(kycRecord.user.name ?? "", body.failureReason),
       }).catch(console.error);
+    }
+  }
+
+  if (kycRecord?.user?.phone) {
+    if (body.status === "VERIFIED") {
+      sendSmsAsync({ to: kycRecord.user.phone, message: smsTemplates.kycVerified(kycRecord.user.name ?? "") });
+    } else if (body.status === "FAILED") {
+      sendSmsAsync({ to: kycRecord.user.phone, message: smsTemplates.kycFailed(kycRecord.user.name ?? "") });
     }
   }
 

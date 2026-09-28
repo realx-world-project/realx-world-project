@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
+import { sendSmsAsync } from "@/lib/sms";
+import { smsTemplates } from "@/lib/sms-templates";
 
 const bodySchema = z.object({
   listingId: z.string().min(1),
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
 
   const listing = await db.listing.findUnique({
     where: { id: listingId },
-    select: { id: true, title: true, status: true, userId: true, user: { select: { email: true, name: true } } },
+    select: { id: true, title: true, status: true, userId: true, user: { select: { email: true, name: true, phone: true } } },
   });
 
   if (!listing || listing.status !== "PUBLISHED") {
@@ -126,6 +128,10 @@ export async function POST(request: NextRequest) {
         </div>
       `,
     }).catch((err) => console.error("[enquiries POST] email failed:", err));
+  }
+
+  if (listing.user?.phone) {
+    sendSmsAsync({ to: listing.user.phone, message: smsTemplates.newEnquiry(listing.title) });
   }
 
   return NextResponse.json({ id: enquiry.id, enquiryId: enquiry.id });

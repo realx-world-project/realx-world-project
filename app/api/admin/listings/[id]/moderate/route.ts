@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { moderateSchema } from "@/lib/validations/listing";
 import { sendEmail, listingApprovedEmail, listingRejectedEmail } from "@/lib/email";
+import { sendSmsAsync } from "@/lib/sms";
+import { smsTemplates } from "@/lib/sms-templates";
 
 export async function PATCH(
   request: NextRequest,
@@ -61,7 +63,7 @@ export async function PATCH(
 
     const listingWithUser = await prisma.listing.findUnique({
       where: { id: listingId },
-      select: { title: true, user: { select: { email: true, name: true } } },
+      select: { title: true, user: { select: { email: true, name: true, phone: true } } },
     });
 
     if (listingWithUser?.user?.email) {
@@ -78,6 +80,16 @@ export async function PATCH(
           html: listingRejectedEmail(listingWithUser.title, reason),
         }).catch(console.error);
       }
+    }
+
+    if (listingWithUser?.user?.phone) {
+      sendSmsAsync({
+        to: listingWithUser.user.phone,
+        message:
+          action === "APPROVE"
+            ? smsTemplates.listingApproved(listingWithUser.title)
+            : smsTemplates.listingRejected(listingWithUser.title),
+      });
     }
 
     return NextResponse.json({ id: listing.id, status: listing.status });
