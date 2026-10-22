@@ -104,6 +104,9 @@ export default async function DashboardPage() {
   const role = (session.user as any).role as string;
   const name = session.user.name ?? "User";
   const userId = (session.user as any).id as string;
+
+  // Admins belong in the admin panel, not the user dashboard
+  if (role === "ADMIN") redirect("/admin/dashboard");
   const isSeller = role === "SELLER";
 
   let pendingCount = 0;
