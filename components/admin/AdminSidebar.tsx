@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/listings", label: "Listings", badge: "0" },
   { href: "/admin/enquiries", label: "Enquiries" },
+  { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/professionals", label: "Professionals" },
   { href: "/admin/materials", label: "Materials" },
   { href: "/admin/vendors", label: "Vendors" },

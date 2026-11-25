@@ -12,6 +12,7 @@ const baseLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/profile", label: "Profile" },
   { href: "/dashboard/enquiries", label: "Enquiries" },
+  { href: "/dashboard/bookings", label: "My Bookings" },
   { href: "/dashboard/saved", label: "Saved Listings" },
   { href: "/dashboard/saved-searches", label: "Saved Searches" },
   { href: "/dashboard/vendor", label: "Vendor Dashboard" },
@@ -21,6 +22,7 @@ const baseLinks = [
 const roleLinks = [
   { href: "/dashboard/listings", label: "My Listings" },
   { href: "/dashboard/listings/new", label: "Add Listing" },
+  { href: "/dashboard/host/bookings", label: "Booking Requests" },
   { href: "/dashboard/kyc", label: "Identity Verification" },
 ];
 

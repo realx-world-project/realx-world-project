@@ -71,6 +71,7 @@ model User {
   enquiryMessages EnquiryMessage[]
   upgradeRequest  RoleUpgradeRequest?
   savedSearches   SavedSearch[]
+  bookingsAsGuest Booking[]  @relation("BookingsAsGuest")
 
   @@map("users")
 }
@@ -98,6 +99,8 @@ model Listing {
   payments    Payment[]
   escrows     Escrow[]
   enquiries   Enquiry[]
+  bookings     Booking[]
+  blockedDates BlockedDate[]
 
   @@map("listings")
 }
@@ -471,6 +474,13 @@ enum UpgradeRequestStatus {
   REJECTED
 }
 
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
 model RoleUpgradeRequest {
   id          String               @id @default(cuid())
   userId      String               @unique
@@ -483,6 +493,40 @@ model RoleUpgradeRequest {
   updatedAt   DateTime             @updatedAt
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@map("role_upgrade_requests")
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  listingId   String
+  guestId     String
+  checkIn     DateTime
+  checkOut    DateTime
+  nights      Int
+  totalPrice  Float
+  status      BookingStatus @default(PENDING)
+  guestNote   String?
+  hostNote    String?
+  cancelledBy String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  listing     Listing       @relation(fields: [listingId], references: [id])
+  guest       User          @relation("BookingsAsGuest", fields: [guestId], references: [id])
+
+  @@map("bookings")
+}
+
+model BlockedDate {
+  id        String   @id @default(cuid())
+  listingId String
+  date      DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+
+  listing   Listing  @relation(fields: [listingId], references: [id])
+
+  @@unique([listingId, date])
+  @@map("blocked_dates")
 }
 
 datasource db {

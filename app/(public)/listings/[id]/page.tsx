@@ -11,6 +11,7 @@ import { CompareButton } from "@/components/listings/CompareButton";
 import { ReportDialog } from "@/components/listings/ReportDialog";
 import { EnquiryButton } from "@/components/listings/EnquiryButton";
 import { EnquiryForm } from "@/components/listings/EnquiryForm";
+import { BookingRequestForm } from "@/components/bookings/BookingRequestForm";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Listing } from "@/components/listings/ListingCard";
@@ -341,7 +342,18 @@ export default async function ListingDetailPage({
               paymentsEnabled={false}
             />
 
-            {listing.status === "PUBLISHED" && (
+            {listing.status === "PUBLISHED" && listing.type === "SHORT_TERM" && (
+              <>
+                <Separator />
+                <BookingRequestForm
+                  listingId={listing.id}
+                  pricePerNight={listing.price}
+                  isLoggedIn={isAuthenticated}
+                />
+              </>
+            )}
+
+            {listing.status === "PUBLISHED" && listing.type !== "SHORT_TERM" && (
               <>
                 <Separator />
                 <EnquiryForm
