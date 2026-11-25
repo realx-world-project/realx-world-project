@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -20,6 +20,13 @@ import { Users, Home, Briefcase, MessageSquare } from "lucide-react";
 import { StatCard } from "@/components/admin/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -39,6 +46,39 @@ interface AnalyticsData {
   listingsByCategory: { category: string; count: number }[];
   listingsByState: { state: string; count: number }[];
   revenueByDay: { date: string; amount: number }[];
+  bookingsByDay: { date: string; count: number }[];
+  bookingRevByDay: { date: string; amount: number }[];
+  bookingsByStatus: { status: string; count: number }[];
+  priceByState: { state: string; type: string; avgPrice: number; listingCount: number }[];
+  priceByCategory: { category: string; type: string; avgPrice: number; listingCount: number }[];
+}
+
+const priceTypeLabels: Record<string, string> = {
+  SALE: "For Sale",
+  SHORT_TERM: "Short-Term (per night)",
+  MONTHLY: "Monthly",
+  ANNUAL: "Annual",
+  LONG_TERM: "Long-Term",
+};
+
+const bookingStatusColors: Record<string, string> = {
+  PENDING: "#F59E0B",
+  CONFIRMED: "#16A34A",
+  CANCELLED: "#DC2626",
+  COMPLETED: "#6B7280",
+};
+
+// Merges per-type average rows into one row per key for the chosen type
+function avgPriceBy<K extends "state" | "category">(
+  rows: ({ type: string; avgPrice: number; listingCount: number } & Record<K, string>)[],
+  key: K,
+  type: string
+) {
+  return rows
+    .filter((r) => r.type === type)
+    .map((r) => ({ [key]: r[key], avgPrice: r.avgPrice, listings: r.listingCount }))
+    .sort((a, b) => b.avgPrice - a.avgPrice)
+    .slice(0, 10);
 }
 
 const periodLabels: Record<Period, string> = {
@@ -76,6 +116,15 @@ const formatAmount = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
+// Axis ticks: ₦25K, ₦1.2M, ₦3B — readable for both nightly rates and sale prices
+const formatAmountCompact = (amount: number) =>
+  new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(amount);
+
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Card>
@@ -93,17 +142,27 @@ function ChartSkeleton() {
   return <Skeleton className="h-72 w-full" />;
 }
 
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">{message}</div>
+  );
+}
+
 export default function AnalyticsClient({ initialStats }: { initialStats: any }) {
   const stats = initialStats ?? {};
   const [period, setPeriod] = useState<Period>("30d");
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [priceTypeFilter, setPriceTypeFilter] = useState<string>("SALE");
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     fetch(`/api/admin/analytics?period=${period}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (!cancelled) setAnalytics(data);
       })
@@ -115,6 +174,16 @@ export default function AnalyticsClient({ initialStats }: { initialStats: any })
       cancelled = true;
     };
   }, [period]);
+
+  const priceByStateData = useMemo(
+    () => avgPriceBy(analytics?.priceByState ?? [], "state", priceTypeFilter),
+    [analytics, priceTypeFilter]
+  );
+  const priceByCategoryData = useMemo(
+    () => avgPriceBy(analytics?.priceByCategory ?? [], "category", priceTypeFilter),
+    [analytics, priceTypeFilter]
+  );
+  const totalBookings = sumCounts(analytics?.bookingsByStatus);
 
   const totalListings = sumCounts(stats.listingsByStatus);
   const totalProfessionals = sumCounts(stats.professionalsByStatus);
@@ -243,6 +312,122 @@ export default function AnalyticsClient({ initialStats }: { initialStats: any })
             </ResponsiveContainer>
           )}
         </ChartCard>
+      </div>
+
+      {/* Price by Location — published listings, all time, one listing type at a time */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Average Prices</h2>
+          <Select value={priceTypeFilter} onValueChange={setPriceTypeFilter}>
+            <SelectTrigger className="w-52" aria-label="Listing type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(priceTypeLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {(
+            [
+              { title: "Average Price per State", data: priceByStateData, key: "state", fill: "#D4AF37" },
+              { title: "Average Price per Category", data: priceByCategoryData, key: "category", fill: "#2563EB" },
+            ] as const
+          ).map((chart) => (
+            <ChartCard key={chart.key} title={chart.title}>
+              {loading || !analytics ? (
+                <ChartSkeleton />
+              ) : chart.data.length === 0 ? (
+                <EmptyChart message={`No published ${priceTypeLabels[priceTypeFilter].toLowerCase()} listings yet.`} />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chart.data} layout="vertical" margin={{ left: 16 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tickFormatter={formatAmountCompact} tick={{ fontSize: 10 }} />
+                    <YAxis dataKey={chart.key} type="category" tick={{ fontSize: 11 }} width={100} />
+                    <Tooltip
+                      formatter={(v: any, _name, item: any) => [
+                        `${formatAmount(Number(v))} (${item.payload.listings} listing${item.payload.listings === 1 ? "" : "s"})`,
+                        "Avg price",
+                      ]}
+                    />
+                    <Bar dataKey="avgPrice" fill={chart.fill} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+          ))}
+        </div>
+      </div>
+
+      {/* Bookings — requests created in the selected period */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Bookings</h2>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <ChartCard title="Booking Requests">
+            {loading || !analytics ? (
+              <ChartSkeleton />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.bookingsByDay}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="count" name="Requests" stroke="#2563EB" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+
+          <ChartCard title="Booking Status">
+            {loading || !analytics ? (
+              <ChartSkeleton />
+            ) : totalBookings === 0 ? (
+              <EmptyChart message="No bookings in this period." />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={analytics.bookingsByStatus}
+                    dataKey="count"
+                    nameKey="status"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label
+                  >
+                    {analytics.bookingsByStatus.map((entry, i) => (
+                      <Cell key={i} fill={bookingStatusColors[entry.status] ?? "#9CA3AF"} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+
+          <ChartCard title="Confirmed Booking Value (₦)">
+            {loading || !analytics ? (
+              <ChartSkeleton />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.bookingRevByDay}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis tickFormatter={formatAmountCompact} width={70} tick={{ fontSize: 10 }} />
+                  <Tooltip formatter={(v: any) => formatAmount(Number(v))} />
+                  <Line type="monotone" dataKey="amount" name="Value" stroke="#16A34A" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+        </div>
       </div>
 
       {/* Section 4: Platform Health */}

@@ -34,21 +34,42 @@ export async function verifyIdentity(params: {
       },
       body: JSON.stringify({
         id: params.idNumber,
-        firstName: params.firstName,
-        lastName: params.lastName,
-        dateOfBirth: params.dateOfBirth,
         isSubjectConsent: true,
+        validations: {
+          data: {
+            firstName: params.firstName,
+            lastName: params.lastName,
+            dateOfBirth: params.dateOfBirth,
+          },
+        },
       }),
     });
     const data = await res.json();
+    console.log(data);
     // Youverify returns statusCode 200 and success: true on match
-    if (data?.statusCode === 200 && data?.success === true) {
+    const nameMatch =
+      data?.data?.validations?.data?.firstName?.status === "VALID" &&
+      data?.data?.validations?.data?.lastName?.status === "VALID";
+
+    // ID exists and names match — full success
+    if (data?.statusCode === 200 && data?.success === true && nameMatch) {
       return {
         success: true,
         reference: data?.data?.id ?? data?.requestId,
         raw: data,
       };
     }
+
+    // ID exists but names did not match
+    if (data?.statusCode === 200 && data?.success === true && !nameMatch) {
+      return {
+        success: false,
+        failureReason: "Name does not match the ID record. Please check your first and last name.",
+        raw: data,
+      };
+    }
+
+    // API returned an explicit failure
     return {
       success: false,
       failureReason: data?.message ?? "Verification failed",

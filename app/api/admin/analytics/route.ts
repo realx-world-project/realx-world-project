@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const db: any = prisma;
 
-  const [listings, users, payments, stateRows] = await Promise.all([
+  const [listings, users, payments, stateRows, priceByStateRows, priceByCategoryRows, bookings] = await Promise.all([
     prisma.listing.findMany({
       where: { createdAt: { gte: start } },
       select: { createdAt: true, type: true, category: true },
@@ -91,6 +91,35 @@ export async function GET(request: NextRequest) {
       ORDER BY count DESC
       LIMIT 10
     `,
+    // Average price per state and type; the client filters by type, since
+    // averaging sale prices with nightly rates would be meaningless.
+    // bigint, not int: sale prices can exceed int's ~2.1B limit.
+    prisma.$queryRaw<{ state: string; type: string; avg_price: bigint; listing_count: number }[]>`
+      SELECT
+        l.state,
+        li.type::text AS type,
+        ROUND(AVG(li.price))::bigint AS avg_price,
+        COUNT(*)::int AS listing_count
+      FROM locations l
+      JOIN listings li ON li."locationId" = l.id
+      WHERE li.status = 'PUBLISHED'
+      GROUP BY l.state, li.type
+    `,
+    // Average price per category and type
+    prisma.$queryRaw<{ category: string; type: string; avg_price: bigint; listing_count: number }[]>`
+      SELECT
+        li.category::text AS category,
+        li.type::text AS type,
+        ROUND(AVG(li.price))::bigint AS avg_price,
+        COUNT(*)::int AS listing_count
+      FROM listings li
+      WHERE li.status = 'PUBLISHED'
+      GROUP BY li.category, li.type
+    `,
+    prisma.booking.findMany({
+      where: { createdAt: { gte: start } },
+      select: { createdAt: true, status: true, totalPrice: true },
+    }),
   ]);
 
   const listingsByDay = bucketByDay(listings, start, now, () => 1);
@@ -113,6 +142,38 @@ export async function GET(request: NextRequest) {
 
   const listingsByState = (stateRows as any[]).map((r) => ({ state: r.state, count: Number(r.count) }));
 
+  const bookingsByDay = bucketByDay(bookings, start, now, () => 1);
+  // Value of bookings hosts accepted, by the day they were requested
+  const bookingRevByDay = bucketByDay(
+    bookings.filter((b) => b.status === "CONFIRMED" || b.status === "COMPLETED"),
+    start,
+    now,
+    (b) => b.totalPrice
+  ).map((r) => ({ date: r.date, amount: r.count }));
+
+  const bookingStatusCounts = new Map<string, number>();
+  for (const b of bookings) {
+    bookingStatusCounts.set(b.status, (bookingStatusCounts.get(b.status) ?? 0) + 1);
+  }
+  const bookingsByStatus = Array.from(bookingStatusCounts.entries()).map(([status, count]) => ({
+    status,
+    count,
+  }));
+
+  const priceByState = priceByStateRows.map((r) => ({
+    state: r.state,
+    type: r.type,
+    avgPrice: Number(r.avg_price),
+    listingCount: Number(r.listing_count),
+  }));
+
+  const priceByCategory = priceByCategoryRows.map((r) => ({
+    category: r.category,
+    type: r.type,
+    avgPrice: Number(r.avg_price),
+    listingCount: Number(r.listing_count),
+  }));
+
   return NextResponse.json({
     listingsByDay,
     usersByDay,
@@ -120,5 +181,10 @@ export async function GET(request: NextRequest) {
     listingsByCategory,
     listingsByState,
     revenueByDay,
+    bookingsByDay,
+    bookingRevByDay,
+    bookingsByStatus,
+    priceByState,
+    priceByCategory,
   });
 }
