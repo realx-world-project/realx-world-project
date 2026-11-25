@@ -45,7 +45,6 @@ export async function verifyIdentity(params: {
       }),
     });
     const data = await res.json();
-    console.log(data);
     // Youverify returns statusCode 200 and success: true on match
     const nameMatch =
       data?.data?.validations?.data?.firstName?.status === "VALID" &&
